@@ -1,4 +1,4 @@
-# catalogo-tecnologico-daw
+
 # Catálogo de Productos Tecnológicos
 
 Proyecto Integrador Profesional – DAW 2
