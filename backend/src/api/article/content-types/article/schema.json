@@ -53,6 +53,11 @@
         "shared.rich-text",
         "shared.slider"
       ]
+    },
+    "seo": {
+      "type": "component",
+      "component": "shared.seo",
+      "repeatable": false
     }
   }
 }

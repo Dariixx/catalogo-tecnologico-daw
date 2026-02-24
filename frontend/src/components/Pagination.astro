@@ -1,0 +1,174 @@
+---
+// src/components/Pagination.astro
+
+interface Pagination {
+  page: number;
+  pageCount: number;
+}
+
+interface Props {
+  pagination: Pagination;
+}
+
+const { pagination } = Astro.props;
+const { page, pageCount } = pagination;
+
+const hasPrev = page > 1;
+const hasNext = page < pageCount;
+
+// Preservar query params existentes salvo "page"
+const currentParams = new URLSearchParams(Astro.url.search);
+currentParams.delete("page");
+const baseQuery = currentParams.toString();
+const sep = baseQuery ? `&${baseQuery}` : "";
+
+const prevUrl = hasPrev ? `?page=${page - 1}${sep}` : null;
+const nextUrl = hasNext ? `?page=${page + 1}${sep}` : null;
+
+// Rango de páginas visibles (máx 5 alrededor de la actual)
+const delta = 2;
+const rangeStart = Math.max(1, page - delta);
+const rangeEnd = Math.min(pageCount, page + delta);
+const pages: number[] = [];
+for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+
+const showLeftEllipsis = rangeStart > 2;
+const showRightEllipsis = rangeEnd < pageCount - 1;
+const showFirst = rangeStart > 1;
+const showLast = rangeEnd < pageCount;
+---
+
+{pageCount > 1 && (
+  <nav aria-label="Paginación" class="flex items-center justify-center gap-1.5 flex-wrap">
+    <!-- Anterior -->
+    {hasPrev ? (
+      <a
+        href={prevUrl!}
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+        style="background: #151a22; color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.08);"
+        onmouseover="this.style.borderColor='rgba(30,136,229,0.4)'; this.style.color='#e5e5e5'; this.style.background='rgba(30,136,229,0.08)';"
+        onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.color='rgba(229,229,229,0.7)'; this.style.background='#151a22';"
+        aria-label="Página anterior"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M9 3L5 7l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Anterior
+      </a>
+    ) : (
+      <span
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed select-none"
+        style="background: rgba(21,26,34,0.5); color: rgba(229,229,229,0.2); border: 1px solid rgba(255,255,255,0.04);"
+        aria-disabled="true"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M9 3L5 7l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        Anterior
+      </span>
+    )}
+
+    <!-- Números -->
+    <div class="flex items-center gap-1">
+      {showFirst && (
+        <>
+          <a
+            href={`?page=1${sep}`}
+            class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200"
+            style="background: #151a22; color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.08);"
+            onmouseover="this.style.borderColor='rgba(30,136,229,0.4)'; this.style.color='#e5e5e5'; this.style.background='rgba(30,136,229,0.08)';"
+            onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.color='rgba(229,229,229,0.7)'; this.style.background='#151a22';"
+            aria-label="Página 1"
+          >
+            1
+          </a>
+
+          {showLeftEllipsis && (
+            <span
+              class="inline-flex items-center justify-center w-9 h-9 text-sm select-none"
+              style="color: rgba(229,229,229,0.3);"
+            >
+              …
+            </span>
+          )}
+        </>
+      )}
+
+      {pages.map((p) =>
+        p === page ? (
+          <span
+            class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold select-none"
+            style="background: #1e88e5; color: #fff; border: 1px solid #1e88e5;"
+            aria-current="page"
+            aria-label={`Página ${p}, actual`}
+          >
+            {p}
+          </span>
+        ) : (
+          <a
+            href={`?page=${p}${sep}`}
+            class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200"
+            style="background: #151a22; color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.08);"
+            onmouseover="this.style.borderColor='rgba(30,136,229,0.4)'; this.style.color='#e5e5e5'; this.style.background='rgba(30,136,229,0.08)';"
+            onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.color='rgba(229,229,229,0.7)'; this.style.background='#151a22';"
+            aria-label={`Página ${p}`}
+          >
+            {p}
+          </a>
+        )
+      )}
+
+      {showLast && (
+        <>
+          {showRightEllipsis && (
+            <span
+              class="inline-flex items-center justify-center w-9 h-9 text-sm select-none"
+              style="color: rgba(229,229,229,0.3);"
+            >
+              …
+            </span>
+          )}
+
+          <a
+            href={`?page=${pageCount}${sep}`}
+            class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-sm font-medium transition-all duration-200"
+            style="background: #151a22; color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.08);"
+            onmouseover="this.style.borderColor='rgba(30,136,229,0.4)'; this.style.color='#e5e5e5'; this.style.background='rgba(30,136,229,0.08)';"
+            onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.color='rgba(229,229,229,0.7)'; this.style.background='#151a22';"
+            aria-label={`Página ${pageCount}`}
+          >
+            {pageCount}
+          </a>
+        </>
+      )}
+    </div>
+
+    <!-- Siguiente -->
+    {hasNext ? (
+      <a
+        href={nextUrl!}
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+        style="background: #151a22; color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.08);"
+        onmouseover="this.style.borderColor='rgba(30,136,229,0.4)'; this.style.color='#e5e5e5'; this.style.background='rgba(30,136,229,0.08)';"
+        onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.color='rgba(229,229,229,0.7)'; this.style.background='#151a22';"
+        aria-label="Página siguiente"
+      >
+        Siguiente
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+    ) : (
+      <span
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed select-none"
+        style="background: rgba(21,26,34,0.5); color: rgba(229,229,229,0.2); border: 1px solid rgba(255,255,255,0.04);"
+        aria-disabled="true"
+      >
+        Siguiente
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+    )}
+  </nav>
+)}

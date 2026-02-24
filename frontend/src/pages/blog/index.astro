@@ -1,0 +1,256 @@
+---
+// src/pages/blog/index.astro
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ArticleCard from "../../components/ArticleCard.astro";
+import Pagination from "../../components/Pagination.astro";
+
+const params   = new URL(Astro.url).searchParams;
+const page     = Math.max(1, parseInt(params.get("page") ?? "1", 10));
+const pageSize = 9;
+
+let articles  = [];
+let pageCount = 1;
+let total     = 0;
+let featured  = null;
+
+try {
+  const [mainRes, featuredRes] = await Promise.all([
+    fetch(
+      `${import.meta.env.STRAPI_URL}/api/articles?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort=publishedAt:desc`
+    ),
+    page === 1
+      ? fetch(
+          `${import.meta.env.STRAPI_URL}/api/articles?populate=*&pagination[limit]=1&sort=publishedAt:desc&filters[featured][$eq]=true`
+        )
+      : Promise.resolve(null),
+  ]);
+
+  const mainData = await mainRes.json();
+  articles  = mainData?.data ?? [];
+  pageCount = mainData?.meta?.pagination?.pageCount ?? 1;
+  total     = mainData?.meta?.pagination?.total ?? 0;
+
+  if (featuredRes) {
+    const featuredData = await featuredRes.json();
+    const raw = featuredData?.data?.[0];
+    if (raw) featured = raw.attributes ?? raw;
+  }
+} catch (e) {
+  // silencioso
+}
+---
+
+<BaseLayout
+  title="Blog — ZetaGadget"
+  description="Artículos, guías y noticias sobre tecnología y gadgets en ZetaGadget."
+>
+
+  <!-- Header -->
+  <div class="pb-10 pt-2">
+    <div class="flex flex-col gap-2 max-w-xl">
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color: #1e88e5;">
+        Blog
+      </p>
+      <h1 class="text-3xl sm:text-4xl font-bold" style="color: #e5e5e5;">
+        Artículos & Guías
+      </h1>
+      <p class="text-sm leading-relaxed" style="color: rgba(229,229,229,0.5);">
+        Noticias, análisis y consejos sobre el mundo tech. Actualizado regularmente.
+      </p>
+    </div>
+  </div>
+
+  <!-- Artículo destacado (solo página 1) -->
+  {page === 1 && featured && (
+<a
+  href={`/blog/${featured.slug}`}
+  class="group block rounded-2xl overflow-hidden mb-12 transition-all duration-300"
+>
+      <div class="grid grid-cols-1 lg:grid-cols-2">
+
+        <!-- Cover -->
+        <div class="relative overflow-hidden" style="min-height: 260px;">
+          {featured.cover?.data?.attributes?.url ?? featured.coverUrl ? (
+            <img
+              src={featured.cover?.data?.attributes?.url ?? featured.coverUrl}
+              alt={featured.title}
+              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              style="min-height: 260px;"
+              loading="eager"
+              decoding="async"
+            />
+          ) : (
+            <div
+              class="w-full h-full flex items-center justify-center"
+              style="background: rgba(255,255,255,0.03); min-height: 260px;"
+            >
+              <svg width="52" height="52" viewBox="0 0 52 52" fill="none" aria-hidden="true">
+                <rect width="52" height="52" rx="12" fill="rgba(30,136,229,0.07)"/>
+                <path d="M13 36L21 26l6 7 5-5 7 8H13z" fill="none" stroke="rgba(229,229,229,0.15)" stroke-width="1.5" stroke-linejoin="round"/>
+                <circle cx="21" cy="22" r="4" fill="none" stroke="rgba(229,229,229,0.15)" stroke-width="1.5"/>
+              </svg>
+            </div>
+          )}
+          <!-- Badge destacado -->
+          <div class="absolute top-4 left-4">
+            <span
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+              style="background: rgba(30,136,229,0.85); color: #fff; backdrop-filter: blur(8px);"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+              Destacado
+            </span>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="flex flex-col justify-center gap-4 p-8 lg:p-10">
+          <p class="text-xs font-semibold uppercase tracking-widest" style="color: #1e88e5;">
+            Artículo destacado
+          </p>
+          <h2
+            class="text-xl sm:text-2xl font-bold leading-snug transition-colors duration-200"
+            style="color: #e5e5e5;"
+          >
+            {featured.title}
+          </h2>
+          {featured.description && (
+            <p class="text-sm leading-relaxed line-clamp-3" style="color: rgba(229,229,229,0.55);">
+              {featured.description}
+            </p>
+          )}
+
+          <!-- Meta -->
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {(featured.author?.data?.attributes?.name ?? featured.authorName) && (
+              <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.45);">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                  <circle cx="6.5" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M2 11c0-2.485 2.015-4 4.5-4s4.5 1.515 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                {featured.author?.data?.attributes?.name ?? featured.authorName}
+              </span>
+            )}
+            {featured.publishedAt && (
+              <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                  <rect x="1.5" y="2.5" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M4.5 1.5v2M8.5 1.5v2M1.5 5.5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                {new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric" }).format(new Date(featured.publishedAt))}
+              </span>
+            )}
+            {featured.readingTime && (
+              <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                  <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M6.5 4v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {featured.readingTime} min lectura
+              </span>
+            )}
+          </div>
+
+          <span
+            class="mt-2 inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200 w-fit"
+            style="color: #3aa0ff;"
+          >
+            Leer artículo
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:translate-x-0.5">
+              <path d="M3 7h8M7.5 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+    </a>
+  )}
+
+  <!-- Contador + separador -->
+  {total > 0 && (
+    <div class="flex items-center justify-between mb-6">
+      <p class="text-sm" style="color: rgba(229,229,229,0.4);">
+        {total} artículo{total !== 1 ? "s" : ""} publicado{total !== 1 ? "s" : ""}
+      </p>
+      {pageCount > 1 && (
+        <p class="text-xs" style="color: rgba(229,229,229,0.3);">
+          Página {page} de {pageCount}
+        </p>
+      )}
+    </div>
+  )}
+
+  <!-- Grid artículos -->
+  {articles.length > 0 ? (
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {articles.map((item: any) => {
+        const a      = item.attributes ?? item;
+        const author = a.author?.data?.attributes ?? a.author ?? null;
+        return (
+          <ArticleCard
+            article={{
+              title:       a.title,
+              slug:        a.slug,
+              description: a.description ?? a.excerpt,
+              coverUrl:    a.cover?.data?.attributes?.url ?? a.coverUrl ?? null,
+              authorName:  author?.name ?? a.authorName ?? null,
+              publishedAt: a.publishedAt,
+              readingTime: a.readingTime ?? a.reading_time ?? null,
+            }}
+          />
+        );
+      })}
+    </div>
+
+  ) : (
+
+    <!-- Empty state -->
+    <div
+      class="relative flex flex-col items-center text-center py-24 px-6 rounded-2xl overflow-hidden"
+      style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
+    >
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 flex items-center justify-center"
+      >
+        <div
+          class="w-80 h-48 rounded-full"
+          style="background: radial-gradient(ellipse, rgba(30,136,229,0.07) 0%, transparent 70%); filter: blur(32px);"
+        ></div>
+      </div>
+
+      <div
+        class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 z-10"
+        style="background: rgba(30,136,229,0.08); border: 1px solid rgba(30,136,229,0.15);"
+      >
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect x="4" y="5" width="20" height="18" rx="3" fill="none" stroke="rgba(30,136,229,0.5)" stroke-width="1.5"/>
+          <path d="M9 10h10M9 14h10M9 18h6" stroke="rgba(229,229,229,0.25)" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <h2 class="text-xl font-semibold mb-2 z-10" style="color: #e5e5e5;">
+        No hay artículos publicados
+      </h2>
+      <p class="text-sm max-w-sm mb-7 z-10" style="color: rgba(229,229,229,0.45);">
+        Estamos preparando contenido de calidad. Vuelve pronto para leer nuestros artículos y guías.
+      </p>
+      
+        href="/productos"
+        class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 z-10"
+        style="background: #1e88e5; color: #fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
+        onmouseover="this.style.background='#3aa0ff';"
+        onmouseout="this.style.background='#1e88e5';"
+      >
+        Explorar productos
+      </a>
+    </div>
+  )}
+
+  <!-- Paginación -->
+  {pageCount > 1 && (
+    <div class="mt-12 flex justify-center">
+      <Pagination pagination={{ page, pageCount }} />
+    </div>
+  )}
+
+</BaseLayout>

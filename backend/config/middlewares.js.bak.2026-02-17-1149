@@ -1,0 +1,9 @@
+{
+  name: 'strapi::cors',
+  config: {
+    enabled: true,
+    origin: ['https://zetagadget.es', 'https://www.zetagadget.es'],
+    headers: '*',
+    credentials: true,
+  },
+},

@@ -1,0 +1,95 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { strapiFetch, absoluteUrl } from "../../lib/strapi.js";
+
+export async function getStaticPaths() {
+  try {
+    const res = await strapiFetch(`/products?pagination[limit]=1000&fields=slug`);
+    const items = res?.data ?? [];
+    return items
+      .map((it) => ({
+        params: { slug: (it.attributes ?? it)?.slug },
+      }))
+      .filter((x) => !!x.params.slug);
+  } catch {
+    return [];
+  }
+}
+const { slug } = Astro.params;
+
+// IMPORTANTE: encode slug para evitar URLs rotas
+const safeSlug = encodeURIComponent(slug);
+
+// Si tu strapiFetch ya añade /api, esto está bien.
+// Si NO lo añade, tendrías que usar `/api/products...`
+const res = await strapiFetch(
+  `/products?filters[slug][$eq]=${safeSlug}&populate=images,category,category.category,seo.shareImage,specifications`
+);
+
+const item = res?.data?.[0];
+if (!item) return Astro.redirect("/productos");
+
+// Compatible con Strapi v4 (attributes) y v5/otros (objeto plano)
+const p = item.attributes ?? item;
+
+// SEO fallback seguro
+const title = p?.seo?.metaTitle ?? `${p?.name ?? "Producto"} | ZetaGadget`;
+const description = p?.seo?.metaDescription ?? p?.shortDescription ?? "";
+
+// Imagen: prioriza SEO shareImage, si no la primera del producto
+const rawImageUrl =
+  p?.seo?.shareImage?.data?.attributes?.url ??
+  p?.images?.data?.[0]?.attributes?.url ??
+  null;
+
+const image = rawImageUrl ? absoluteUrl(rawImageUrl) : undefined;
+
+// Canonical: normalmente en BaseLayout lo conviertes a absoluto.
+// Si BaseLayout espera string, esto vale.
+const canonical = p?.slug ? `/productos/${p.slug}` : `/productos/${slug}`;
+---
+
+<BaseLayout title={title} description={description} image={image} canonical={canonical}>
+  <section style="max-width:1100px;margin:0 auto;padding:3.5rem 1rem;">
+    <a href="/productos" style="opacity:.75;text-decoration:none;">← Volver</a>
+
+    <h1 style="font-size:2.2rem;margin:1rem 0;font-weight:900;">
+      {p?.name}
+    </h1>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start;">
+      <div style="border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.03);">
+        {p?.images?.data?.[0]?.attributes?.url ? (
+          <img
+            src={absoluteUrl(p.images.data[0].attributes.url)}
+            alt={p?.name ?? "Producto"}
+            style="width:100%;display:block;"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div style="aspect-ratio:1;background:#111318"></div>
+        )}
+      </div>
+
+      <div style="border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px;background:rgba(255,255,255,.03);">
+        <div style="opacity:.7;text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;">
+          {p?.category?.data?.attributes?.category?.data?.attributes?.name
+            ? `${p.category.data.attributes.category.data.attributes.name} / `
+            : ""}
+          {p?.category?.data?.attributes?.name ?? ""}
+        </div>
+
+        <div style="font-weight:900;font-size:1.6rem;margin:10px 0;background:linear-gradient(135deg,#a8f04a,#3dd6f5,#4f8ef7,#8b45e8);-webkit-background-clip:text;color:transparent;">
+          {typeof p?.price === "number" ? `${p.price} €` : (p?.price ? `${p.price} €` : "")}
+        </div>
+
+        {p?.shortDescription && (
+          <p style="opacity:.8;line-height:1.7;">
+            {p.shortDescription}
+          </p>
+        )}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

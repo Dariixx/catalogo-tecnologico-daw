@@ -1,0 +1,191 @@
+---
+// src/components/Header.astro
+const navLinks = [
+  { label: "Inicio", href: "/" },
+  { label: "Productos", href: "/productos" },
+  { label: "Categorías", href: "/categorias" },
+  { label: "Blog", href: "/blog" },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header
+  class="sticky top-0 z-50 w-full border-b"
+  style="background: rgba(15,17,21,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-color: rgba(255,255,255,0.08);"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 shrink-0 group">
+        <img
+          src="/logo.png"
+          alt="ZetaGadget"
+          class="h-8 w-auto transition-opacity duration-200 group-hover:opacity-80"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+        />
+        <!-- Fallback si no hay logo -->
+        <span
+          class="hidden items-center gap-1 text-lg font-bold tracking-tight"
+          style="color: #e5e5e5; display: none;"
+        >
+          <span style="color: #1e88e5;">Zeta</span>Gadget
+        </span>
+      </a>
+
+      <!-- Nav Desktop -->
+      <nav class="hidden md:flex items-center gap-1">
+        {navLinks.map((link) => {
+          const isActive =
+            currentPath === link.href ||
+            (link.href !== "/" && currentPath.startsWith(link.href));
+
+          return (
+            <a
+              href={link.href}
+              class={[
+                "relative px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 group",
+                isActive ? "text-white" : "hover:text-white",
+              ].join(" ")}
+              style={
+                isActive
+                  ? "color: #e5e5e5;"
+                  : "color: rgba(229,229,229,0.65);"
+              }
+            >
+              {/* Hover bg */}
+              <span
+                class="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                style="background: rgba(30,136,229,0.08);"
+              ></span>
+
+              {/* Label */}
+              <span class="relative z-10">{link.label}</span>
+
+              {/* Active underline */}
+              {isActive && (
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-5 rounded-full"
+                  style="background: #1e88e5;"
+                ></span>
+              )}
+
+              {/* Hover underline */}
+              {!isActive && (
+                <span
+                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full group-hover:w-5 transition-all duration-200"
+                  style="background: #3aa0ff;"
+                ></span>
+              )}
+            </a>
+          );
+        })}
+      </nav>
+
+      <!-- CTA Desktop -->
+      <div class="hidden md:flex items-center gap-3">
+        <a
+          href="/productos"
+          class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200"
+          style="background: #1e88e5; color: #fff;"
+          onmouseover="this.style.background='#3aa0ff';"
+          onmouseout="this.style.background='#1e88e5';"
+        >
+          Ver productos
+        </a>
+      </div>
+
+      <!-- Burger Mobile -->
+      <button
+        id="menu-toggle"
+        class="md:hidden flex flex-col justify-center items-center w-10 h-10 rounded-lg transition-colors duration-200 focus:outline-none"
+        style="border: 1px solid rgba(255,255,255,0.08);"
+        aria-label="Abrir menú"
+        aria-expanded="false"
+      >
+        <span class="burger-line block w-5 h-0.5 mb-1 rounded transition-all duration-300" style="background: #e5e5e5;"></span>
+        <span class="burger-line block w-5 h-0.5 mb-1 rounded transition-all duration-300" style="background: #e5e5e5;"></span>
+        <span class="burger-line block w-5 h-0.5 rounded transition-all duration-300" style="background: #e5e5e5;"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Drawer Mobile -->
+  <div
+    id="mobile-menu"
+    class="md:hidden overflow-hidden transition-all duration-300 ease-in-out"
+    style="max-height: 0; border-top: 1px solid rgba(255,255,255,0.08);"
+  >
+    <nav class="flex flex-col px-4 py-3 gap-1" style="background: #151a22;">
+      {navLinks.map((link) => {
+        const isActive =
+          currentPath === link.href ||
+          (link.href !== "/" && currentPath.startsWith(link.href));
+
+        return (
+          <a
+            href={link.href}
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200"
+            style={
+              isActive
+                ? "color: #e5e5e5; background: rgba(30,136,229,0.12); border-left: 2px solid #1e88e5;"
+                : "color: rgba(229,229,229,0.65);"
+            }
+          >
+            {link.label}
+            {isActive && (
+              <span class="ml-auto w-1.5 h-1.5 rounded-full" style="background: #1e88e5;"></span>
+            )}
+          </a>
+        );
+      })}
+
+      <div class="pt-2 pb-1">
+        <a
+          href="/productos"
+          class="block text-center px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200"
+          style="background: #1e88e5; color: #fff;"
+        >
+          Ver productos
+        </a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const toggle = document.getElementById("menu-toggle");
+  const menu = document.getElementById("mobile-menu");
+  const lines = document.querySelectorAll(".burger-line");
+
+  let open = false;
+
+  toggle?.addEventListener("click", () => {
+    open = !open;
+    toggle.setAttribute("aria-expanded", String(open));
+
+    if (open) {
+      menu!.style.maxHeight = menu!.scrollHeight + "px";
+      lines[0].style.transform = "translateY(6px) rotate(45deg)";
+      lines[1].style.opacity = "0";
+      lines[2].style.transform = "translateY(-6px) rotate(-45deg)";
+    } else {
+      menu!.style.maxHeight = "0";
+      lines[0].style.transform = "";
+      lines[1].style.opacity = "1";
+      lines[2].style.transform = "";
+    }
+  });
+
+  // Cerrar al hacer clic en un link
+  menu?.querySelectorAll("a").forEach((a) => {
+    a.addEventListener("click", () => {
+      open = false;
+      menu.style.maxHeight = "0";
+      lines[0].style.transform = "";
+      lines[1].style.opacity = "1";
+      lines[2].style.transform = "";
+    });
+  });
+</script>

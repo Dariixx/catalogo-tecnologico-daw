@@ -1,0 +1,114 @@
+---
+// src/pages/categorias/index.astro
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import CategoryCard from "../../components/CategoryCard.astro";
+
+let categories = [];
+
+try {
+  const res  = await fetch(
+    `${import.meta.env.STRAPI_URL}/api/categories?populate=*&pagination[limit]=100&sort=name:asc`
+  );
+  const data = await res.json();
+  categories = data?.data ?? [];
+} catch (e) {
+  // silencioso
+}
+---
+
+<BaseLayout
+  title="Categorías — ZetaGadget"
+  description="Explora todas las categorías de productos tecnológicos en ZetaGadget."
+>
+
+  <!-- Header -->
+  <div class="pb-10 pt-2">
+    <div class="flex flex-col gap-2 max-w-xl">
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color: #1e88e5;">
+        Explorar
+      </p>
+      <h1 class="text-3xl sm:text-4xl font-bold" style="color: #e5e5e5;">
+        Categorías
+      </h1>
+      <p class="text-sm leading-relaxed" style="color: rgba(229,229,229,0.5);">
+        Navega por todas las familias de productos y encuentra exactamente lo que buscas.
+      </p>
+    </div>
+  </div>
+
+  <!-- Contador -->
+  {categories.length > 0 && (
+    <div class="mb-6 flex items-center gap-2">
+      <span
+        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+        style="background: rgba(30,136,229,0.1); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.2);"
+      >
+        {categories.length} categoría{categories.length !== 1 ? "s" : ""}
+      </span>
+    </div>
+  )}
+
+  <!-- Grid -->
+  {categories.length > 0 ? (
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {categories.map((item: any) => {
+        const c = item.attributes ?? item;
+        return (
+          <CategoryCard
+            category={{
+              name:        c.name,
+              slug:        c.slug,
+              description: c.description ?? null,
+            }}
+          />
+        );
+      })}
+    </div>
+  ) : (
+
+    <!-- Empty state -->
+    <div
+      class="relative flex flex-col items-center text-center py-24 px-6 rounded-2xl overflow-hidden"
+      style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
+    >
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 flex items-center justify-center"
+      >
+        <div
+          class="w-80 h-48 rounded-full"
+          style="background: radial-gradient(ellipse, rgba(30,136,229,0.07) 0%, transparent 70%); filter: blur(32px);"
+        ></div>
+      </div>
+
+      <div
+        class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 z-10"
+        style="background: rgba(30,136,229,0.08); border: 1px solid rgba(30,136,229,0.15);"
+      >
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <rect x="3" y="3" width="9" height="9" rx="2" fill="none" stroke="rgba(30,136,229,0.6)" stroke-width="1.5"/>
+          <rect x="16" y="3" width="9" height="9" rx="2" fill="none" stroke="rgba(30,136,229,0.4)" stroke-width="1.5"/>
+          <rect x="3" y="16" width="9" height="9" rx="2" fill="none" stroke="rgba(30,136,229,0.4)" stroke-width="1.5"/>
+          <rect x="16" y="16" width="9" height="9" rx="2" fill="none" stroke="rgba(30,136,229,0.6)" stroke-width="1.5"/>
+        </svg>
+      </div>
+
+      <h2 class="text-xl font-semibold mb-2 z-10" style="color: #e5e5e5;">
+        No hay categorías disponibles
+      </h2>
+      <p class="text-sm max-w-sm mb-7 z-10" style="color: rgba(229,229,229,0.45);">
+        Estamos organizando el catálogo. Vuelve pronto para explorar todas las familias de productos.
+      </p>
+      
+        href="/productos"
+        class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 z-10"
+        style="background: #1e88e5; color: #fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
+        onmouseover="this.style.background='#3aa0ff';"
+        onmouseout="this.style.background='#1e88e5';"
+      >
+        Ver todos los productos
+      </a>
+    </div>
+  )}
+
+</BaseLayout>

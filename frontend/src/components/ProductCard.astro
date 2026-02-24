@@ -1,0 +1,190 @@
+---
+// src/components/ProductCard.astro
+
+interface Category {
+  name: string;
+  slug: string;
+}
+
+interface Product {
+  name: string;
+  slug: string;
+  price: number;
+  shortDescription?: string;
+  imageUrl?: string;
+  featured?: boolean;
+  stock?: number;
+  category?: Category;
+}
+
+interface Props {
+  product: Product;
+}
+
+const { product } = Astro.props;
+const {
+  name,
+  slug,
+  price,
+  shortDescription,
+  imageUrl,
+  featured = false,
+  stock = 0,
+  category,
+} = product;
+
+const inStock = stock > 0;
+const productUrl = `/productos/${slug}`;
+
+const formattedPrice = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+}).format(price);
+---
+
+<article
+  class="group relative flex flex-col rounded-xl overflow-hidden transition-all duration-300"
+  style="background: #151a22; border: 1px solid rgba(255,255,255,0.08);"
+  onmouseover="this.style.border='1px solid rgba(30,136,229,0.35)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 32px rgba(30,136,229,0.10)';"
+  onmouseout="this.style.border='1px solid rgba(255,255,255,0.08)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+>
+  <!-- Featured badge -->
+  {featured && (
+    <div class="absolute top-3 left-3 z-10">
+      <span
+        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide"
+        style="background: rgba(30,136,229,0.18); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.35);"
+      >
+        <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+          <circle cx="4" cy="4" r="4" fill="#3aa0ff" />
+        </svg>
+        Destacado
+      </span>
+    </div>
+  )}
+
+  <!-- Imagen -->
+  <a href={productUrl} class="block overflow-hidden" tabindex="-1" aria-hidden="true">
+    {imageUrl ? (
+      <img
+        src={imageUrl}
+        alt={name}
+        class="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"
+        loading="lazy"
+        decoding="async"
+      />
+    ) : (
+      <div
+        class="w-full h-48 flex items-center justify-center"
+        style="background: rgba(255,255,255,0.03);"
+      >
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 48 48"
+          fill="none"
+          aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect width="48" height="48" rx="10" fill="rgba(30,136,229,0.08)" />
+          <path
+            d="M14 34L20 26l5 6 4-4 5 6H14z"
+            fill="none"
+            stroke="rgba(229,229,229,0.2)"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          />
+          <circle
+            cx="19"
+            cy="21"
+            r="3"
+            fill="none"
+            stroke="rgba(229,229,229,0.2)"
+            stroke-width="1.5"
+          />
+          <rect
+            x="10"
+            y="14"
+            width="28"
+            height="20"
+            rx="3"
+            fill="none"
+            stroke="rgba(229,229,229,0.15)"
+            stroke-width="1.5"
+          />
+        </svg>
+      </div>
+    )}
+  </a>
+
+  <!-- Contenido -->
+  <div class="flex flex-col flex-1 p-5 gap-3">
+    <!-- Categoría -->
+    {category && (
+      <a
+        href={`/categorias/${category.slug}`}
+        class="text-xs font-medium w-fit transition-colors duration-200"
+        style="color: rgba(30,136,229,0.9);"
+        onmouseover="this.style.color='#3aa0ff';"
+        onmouseout="this.style.color='rgba(30,136,229,0.9)';"
+      >
+        {category.name}
+      </a>
+    )}
+
+    <!-- Nombre -->
+    <a href={productUrl} class="group/title">
+      <h2
+        class="text-base font-semibold leading-snug transition-colors duration-200"
+        style="color: #e5e5e5;"
+        onmouseover="this.style.color='#3aa0ff';"
+        onmouseout="this.style.color='#e5e5e5';"
+      >
+        {name}
+      </h2>
+    </a>
+
+    <!-- Descripción corta -->
+    {shortDescription && (
+      <p
+        class="text-sm leading-relaxed line-clamp-2 flex-1"
+        style="color: rgba(229,229,229,0.55);"
+      >
+        {shortDescription}
+      </p>
+    )}
+
+    <!-- Precio + stock -->
+    <div class="flex items-center justify-between mt-auto pt-2">
+      <span class="text-lg font-bold" style="color: #e5e5e5;">
+        {formattedPrice}
+      </span>
+
+      <span
+        class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
+        style={inStock
+          ? "background: rgba(34,197,94,0.1); color: #4ade80; border: 1px solid rgba(34,197,94,0.2);"
+          : "background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2);"}
+      >
+        <span
+          class="w-1.5 h-1.5 rounded-full"
+          style={inStock ? "background: #4ade80;" : "background: #f87171;"}
+        ></span>
+        {inStock ? "En stock" : "Sin stock"}
+      </span>
+    </div>
+
+    <!-- CTA -->
+    <a
+      href={productUrl}
+      class="mt-2 w-full text-center py-2.5 px-4 rounded-lg text-sm font-semibold transition-all duration-200"
+      style="background: rgba(30,136,229,0.12); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.25);"
+      onmouseover="this.style.background='#1e88e5'; this.style.color='#fff'; this.style.border='1px solid #1e88e5';"
+      onmouseout="this.style.background='rgba(30,136,229,0.12)'; this.style.color='#3aa0ff'; this.style.border='1px solid rgba(30,136,229,0.25)';"
+      aria-label={`Ver producto: ${name}`}
+    >
+      Ver producto
+    </a>
+  </div>
+</article>
