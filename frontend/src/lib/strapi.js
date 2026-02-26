@@ -30,7 +30,6 @@ export function absoluteUrl(path) {
   if (!path) return undefined;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
 
-  // STRAPI_URL debería ser tipo https://api.zetagadget.es (sin /api al final)
   const base = (import.meta.env.STRAPI_URL || "").replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 }
