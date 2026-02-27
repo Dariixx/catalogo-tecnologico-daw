@@ -1,0 +1,40 @@
+---
+const {
+  title = "Sin contenido",
+  description = "",
+  ctaHref,
+  ctaLabel = "Volver",
+} = Astro.props;
+---
+
+<section class="container-page py-14">
+  <div class="mx-auto max-w-2xl text-center">
+    <div class="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl"
+         style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M7 4h10a2 2 0 0 1 2 2v14H5V6a2 2 0 0 1 2-2Z"
+              stroke="rgba(229,229,229,0.7)" stroke-width="1.6" />
+        <path d="M8 9h8M8 13h8" stroke="rgba(229,229,229,0.5)" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <h1 class="text-2xl sm:text-3xl font-semibold" style="color:#e5e5e5;">{title}</h1>
+    {description && (
+      <p class="mt-2 text-sm sm:text-base" style="color: rgba(229,229,229,0.6);">
+        {description}
+      </p>
+    )}
+
+    {ctaHref && (
+      <div class="mt-8">
+        <a
+          href={ctaHref}
+          class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+          style="background:#1e88e5; color:#fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
+        >
+          {ctaLabel}
+        </a>
+      </div>
+    )}
+  </div>
+</section>

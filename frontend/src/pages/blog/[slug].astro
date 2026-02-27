@@ -1,7 +1,9 @@
 ---
 // src/pages/blog/[slug].astro
+import { getReadingTimeMinutes } from "../../lib/readingTime";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ArticleCard from "../../components/ArticleCard.astro";
+
 
 export async function getStaticPaths() {
   try {
@@ -44,6 +46,10 @@ try {
 if (!article) return Astro.redirect("/blog");
 
 const a = article;
+const readingMinutes = getReadingTimeMinutes({
+  content: a.content,     // por si algún día existe
+  blocks: a.blocks,       // tu caso real según Strapi
+});
 const author = a.author?.data?.attributes ?? a.author ?? null;
 const coverUrl = a.cover?.data?.attributes?.url ?? a.coverUrl ?? null;
 const publishedAt = a.publishedAt
@@ -176,15 +182,15 @@ const tags: string[] =
           </span>
         )}
 
-        {(a.readingTime ?? a.reading_time) && (
-          <span class="flex items-center gap-1.5 text-sm" style="color: rgba(229,229,229,0.4);">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2" />
-              <path d="M7 4.5V7l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            {a.readingTime ?? a.reading_time} min lectura
-          </span>
-        )}
+        {readingMinutes && (
+        <span class="flex items-center gap-1.5 text-sm" style="color: rgba(229,229,229,0.4);">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+          <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2" />
+          <path d="M7 4.5V7l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          {readingMinutes} min lectura
+            </span>
+          )}
       </div>
     </div>
 

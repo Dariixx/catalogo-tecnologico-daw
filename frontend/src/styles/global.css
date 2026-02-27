@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+
+:root{
+  --bg: 15 17 21;
+  --panel: 21 26 34;
+  --panel-2: 18 22 30;
+  --border: 255 255 255;
+  --text: 229 229 229;
+  --muted: 229 229 229;
+  --brand: 30 136 229;
+  --brand-2: 58 160 255;
+
+  --radius: 14px;
+  --shadow: 0 12px 30px rgba(0,0,0,.35);
+}
+
+
+@layer base{
+  html{ scroll-behavior:smooth; }
+  body{
+    background: rgb(var(--bg));
+    color: rgb(var(--text));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  a{ color: inherit; text-decoration: none; }
+  ::selection{ background: rgba(var(--brand), .25); }
+}
+
+
+@layer utilities{
+  .container-page{ @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .panel{ background: rgb(var(--panel)); border:1px solid rgba(var(--border),.08); border-radius: var(--radius); }
+  .panel-2{ background: rgb(var(--panel-2)); border:1px solid rgba(var(--border),.08); border-radius: var(--radius); }
+}

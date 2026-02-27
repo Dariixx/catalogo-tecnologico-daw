@@ -1,46 +1,42 @@
 ---
-// src/components/Header.astro
-const navLinks = [
-  { label: "Inicio", href: "/" },
-  { label: "Productos", href: "/productos" },
-  { label: "Categorías", href: "/categorias" },
-  { label: "Blog", href: "/blog" },
-];
+import { site } from "../config/site";
 
+const { brand } = Astro.props;
+
+const navLinks = site.nav;
 const currentPath = Astro.url.pathname;
+
+const isActiveLink = (href) =>
+  currentPath === href || (href !== "/" && currentPath.startsWith(href));
 ---
+
 <header
   class="sticky top-0 z-50 w-full border-b"
   style="background: rgba(15,17,21,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-color: rgba(255,255,255,0.08);"
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-16">
-
+  <div class="container-page">
+    <div class="flex items-center justify-between h-24 py-3">
       <!-- Logo -->
-      <a href="/" class="flex items-center gap-2 shrink-0 group">
-        <img
-          src="/logo.png"
-          alt="ZetaGadget"
-          class="h-8 w-auto transition-opacity duration-200 group-hover:opacity-80"
-          onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
-        />
-        <span class="hidden items-center gap-1 text-lg font-bold tracking-tight" style="color:#e5e5e5;">
-          <span style="color:#1e88e5;">Zeta</span>Gadget
-        </span>
-      </a>
+     <a href="/" class="flex items-center gap-2 shrink-0 group" aria-label="ZetaGadget">
+  <img
+    src="/brand/logo-nombre.png"
+    alt="ZetaGadget"
+   class="h-20 w-auto transition-opacity duration-200 group-hover:opacity-85"
+</a>
+
+
 
       <!-- Nav Desktop -->
       <nav class="hidden md:flex items-center gap-1">
         {navLinks.map((link) => {
-          const isActive =
-            currentPath === link.href ||
-            (link.href !== "/" && currentPath.startsWith(link.href));
+          const active = isActiveLink(link.href);
 
           return (
             <a
               href={link.href}
-              class={`relative px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 group ${isActive ? "text-white" : "hover:text-white"}`}
-              style={isActive ? "color:#e5e5e5;" : "color: rgba(229,229,229,0.65);"}
+              class={`relative px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 group ${active ? "text-white" : "hover:text-white"}`}
+              style={active ? "color:#e5e5e5;" : "color: rgba(229,229,229,0.65);"}
+              aria-current={active ? "page" : undefined}
             >
               <span
                 class="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
@@ -49,7 +45,7 @@ const currentPath = Astro.url.pathname;
 
               <span class="relative z-10">{link.label}</span>
 
-              {isActive ? (
+              {active ? (
                 <span class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-5 rounded-full" style="background:#1e88e5;"></span>
               ) : (
                 <span class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full group-hover:w-5 transition-all duration-200" style="background:#3aa0ff;"></span>
@@ -59,16 +55,27 @@ const currentPath = Astro.url.pathname;
         })}
       </nav>
 
-      <!-- CTA Desktop -->
+      <!-- Right Desktop -->
       <div class="hidden md:flex items-center gap-3">
+        <!-- Carrito icon -->
+        <a href="/carrito" class="relative w-10 h-10 grid place-items-center rounded-lg"
+           style="border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);" aria-label="Carrito">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6h15l-1.5 9h-12L6 6Z" stroke="rgba(229,229,229,0.9)" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M6 6 5 3H2" stroke="rgba(229,229,229,0.9)" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="9" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
+            <circle cx="18" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
+          </svg>
+          <span id="cartBadge" class="absolute -top-2 -right-2 text-xs font-bold px-2 py-0.5 rounded-full hidden"
+                style="background:#1e88e5;color:#fff;">0</span>
+        </a>
+
         <a
-          href="/productos"
+          href={site.primaryCta.href}
           class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200"
           style="background:#1e88e5; color:#fff;"
-          onmouseover="this.style.background='#3aa0ff';"
-          onmouseout="this.style.background='#1e88e5';"
         >
-          Ver productos
+          {site.primaryCta.label}
         </a>
       </div>
 
@@ -96,37 +103,47 @@ const currentPath = Astro.url.pathname;
   >
     <nav class="flex flex-col px-4 py-3 gap-1" style="background:#151a22;">
       {navLinks.map((link) => {
-        const isActive =
-          currentPath === link.href ||
-          (link.href !== "/" && currentPath.startsWith(link.href));
+        const active = isActiveLink(link.href);
         return (
           <a
             href={link.href}
             class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200"
-            style={isActive
+            style={active
               ? "color:#e5e5e5; background: rgba(30,136,229,0.12); border-left:2px solid #1e88e5;"
               : "color: rgba(229,229,229,0.65);"}
+            aria-current={active ? "page" : undefined}
           >
             {link.label}
-            {isActive && <span class="ml-auto w-1.5 h-1.5 rounded-full" style="background:#1e88e5;"></span>}
+            {active && <span class="ml-auto w-1.5 h-1.5 rounded-full" style="background:#1e88e5;"></span>}
           </a>
         );
       })}
 
+      <a
+        href="/carrito"
+        class="flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold"
+        style="color:#e5e5e5; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);"
+      >
+        <span>Carrito</span>
+        <span id="cartBadgeMobile" class="text-xs font-bold px-2 py-0.5 rounded-full hidden"
+              style="background:#1e88e5;color:#fff;">0</span>
+      </a>
+
       <div class="pt-2 pb-1">
         <a
-          href="/productos"
+          href={site.primaryCta.href}
           class="block text-center px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200"
           style="background:#1e88e5; color:#fff;"
         >
-          Ver productos
+          {site.primaryCta.label}
         </a>
       </div>
     </nav>
   </div>
 </header>
 
-<script>
+<script type="module">
+  // menú mobile
   const toggle = document.getElementById("menu-toggle");
   const menu = document.getElementById("mobile-menu");
   const lines = document.querySelectorAll(".burger-line");
@@ -135,7 +152,6 @@ const currentPath = Astro.url.pathname;
   toggle?.addEventListener("click", () => {
     open = !open;
     toggle.setAttribute("aria-expanded", String(open));
-
     if (open) {
       menu.style.maxHeight = menu.scrollHeight + "px";
       lines[0].style.transform = "translateY(6px) rotate(45deg)";
@@ -158,4 +174,27 @@ const currentPath = Astro.url.pathname;
       lines[2].style.transform = "";
     });
   });
+
+  // badge carrito
+  const badge = document.getElementById("cartBadge");
+  const badgeM = document.getElementById("cartBadgeMobile");
+
+  const readCartCount = () => {
+    try {
+      const items = JSON.parse(localStorage.getItem("zetagadget_cart_v1") || "[]");
+      const n = items.reduce((a, it) => a + (it.qty || 1), 0);
+
+      const apply = (el) => {
+        if (!el) return;
+        el.textContent = String(n);
+        el.classList.toggle("hidden", n <= 0);
+      };
+      apply(badge);
+      apply(badgeM);
+    } catch {}
+  };
+
+  readCartCount();
+  window.addEventListener("cart:updated", readCartCount);
+  window.addEventListener("storage", readCartCount);
 </script>

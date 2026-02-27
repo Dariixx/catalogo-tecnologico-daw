@@ -1,5 +1,6 @@
 ---
 // src/pages/blog/index.astro
+import { getReadingTimeMinutes } from "../../lib/readingTime";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ArticleCard from "../../components/ArticleCard.astro";
 import Pagination from "../../components/Pagination.astro";
@@ -140,13 +141,10 @@ try {
                 {new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric" }).format(new Date(featured.publishedAt))}
               </span>
             )}
-            {featured.readingTime && (
-              <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                  <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/>
-                  <path d="M6.5 4v2.5l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                {featured.readingTime} min lectura
+            {getReadingTimeMinutes({ content: featured.content, blocks: featured.blocks }) && (
+            <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
+              ...
+            {getReadingTimeMinutes({ content: featured.content, blocks: featured.blocks })} min lectura
               </span>
             )}
           </div>
@@ -194,7 +192,7 @@ try {
               coverUrl:    a.cover?.data?.attributes?.url ?? a.coverUrl ?? null,
               authorName:  author?.name ?? a.authorName ?? null,
               publishedAt: a.publishedAt,
-              readingTime: a.readingTime ?? a.reading_time ?? null,
+             readingTime: getReadingTimeMinutes({ content: a.content, blocks: a.blocks }),
             }}
           />
         );

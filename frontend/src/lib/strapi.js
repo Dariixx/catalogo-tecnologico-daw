@@ -30,6 +30,6 @@ export function absoluteUrl(path) {
   if (!path) return undefined;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
 
-  const base = (import.meta.env.STRAPI_URL || "").replace(/\/$/, "");
+  const base = STRAPI_URL.replace(/\/$/, "");
   return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 }

@@ -1,57 +1,83 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+const STRAPI = import.meta.env.PUBLIC_STRAPI_URL;
 ---
 
-<BaseLayout title="Contacto | ZetaGadget" description="Contacta con ZetaGadget">
-  <main class="mx-auto max-w-2xl px-4 py-10">
-    <h1 class="text-3xl font-semibold">Contacto</h1>
-    <p class="mt-2 text-sm opacity-80">
-      Envíanos tu consulta y te responderemos lo antes posible.
-    </p>
+<BaseLayout title="Contacto — ZetaGadget" description="Contacta con ZetaGadget">
+  <main class="container-page py-10">
+    <section class="max-w-2xl mx-auto">
+      <h1 class="text-3xl font-semibold">Contacto</h1>
+      <p class="mt-2 text-sm opacity-80">
+        Envíanos tu consulta y te responderemos lo antes posible.
+      </p>
 
-    <form id="contactForm" class="mt-8 space-y-4">
-      <div>
-        <label class="block text-sm font-medium" for="name">Nombre</label>
-        <input class="mt-1 w-full rounded-md border px-3 py-2" id="name" name="name" autocomplete="name" required />
-        <p class="mt-1 text-sm text-red-600 hidden" data-error="name"></p>
-      </div>
+      <form id="contactForm" class="mt-8 space-y-4 panel p-6">
+        <div>
+          <label class="block text-sm font-medium" for="name">Nombre</label>
+          <input class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
+                 style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+                 id="name" name="name" autocomplete="name" required />
+          <p class="mt-1 text-sm text-red-500 hidden" data-error="name"></p>
+        </div>
 
-      <div>
-        <label class="block text-sm font-medium" for="email">Email</label>
-        <input class="mt-1 w-full rounded-md border px-3 py-2" id="email" name="email" type="email" autocomplete="email" required />
-        <p class="mt-1 text-sm text-red-600 hidden" data-error="email"></p>
-      </div>
+        <div>
+          <label class="block text-sm font-medium" for="email">Email</label>
+          <input class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
+                 style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+                 id="email" name="email" type="email" autocomplete="email" required />
+          <p class="mt-1 text-sm text-red-500 hidden" data-error="email"></p>
+        </div>
 
-      <div>
-        <label class="block text-sm font-medium" for="subject">Asunto</label>
-        <input class="mt-1 w-full rounded-md border px-3 py-2" id="subject" name="subject" required />
-        <p class="mt-1 text-sm text-red-600 hidden" data-error="subject"></p>
-      </div>
+        <div>
+          <label class="block text-sm font-medium" for="subject">Asunto</label>
+          <input class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
+                 style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+                 id="subject" name="subject" required />
+          <p class="mt-1 text-sm text-red-500 hidden" data-error="subject"></p>
+        </div>
 
-      <div>
-        <label class="block text-sm font-medium" for="message">Mensaje</label>
-        <textarea class="mt-1 w-full rounded-md border px-3 py-2" id="message" name="message" rows="6" required></textarea>
-        <p class="mt-1 text-sm text-red-600 hidden" data-error="message"></p>
-      </div>
+        <div>
+          <label class="block text-sm font-medium" for="message">Mensaje</label>
+          <textarea class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
+                    style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+                    id="message" name="message" rows="6" required></textarea>
+          <p class="mt-1 text-sm text-red-500 hidden" data-error="message"></p>
+        </div>
 
-      <label class="flex items-start gap-2 text-sm">
-        <input id="consent" name="consent" type="checkbox" class="mt-1" required />
-        <span>Acepto la política de privacidad.</span>
-      </label>
-      <p class="mt-1 text-sm text-red-600 hidden" data-error="consent"></p>
+        <div>
+          <label class="flex items-start gap-2 text-sm">
+            <input id="consent" name="consent" type="checkbox" class="mt-1" required />
+            <span>Acepto la política de privacidad.</span>
+          </label>
+          <p class="mt-1 text-sm text-red-500 hidden" data-error="consent"></p>
+        </div>
 
-      <button id="submitBtn" type="submit" class="rounded-md bg-black px-4 py-2 text-white">
-        Enviar
-      </button>
-
-      <p id="formMsg" class="text-sm mt-3 hidden"></p>
-    </form>
+        <div class="pt-2 flex items-center gap-3">
+          <button id="submitBtn" type="submit" class="rounded-lg px-4 py-2 text-sm font-semibold"
+                  style="background:#1e88e5;color:#fff;border:1px solid #1e88e5;">
+            Enviar
+          </button>
+          <p id="formMsg" class="text-sm hidden"></p>
+        </div>
+      </form>
+    </section>
   </main>
 
-  <script>
+  <script type="module">
+    const STRAPI_URL = ({JSON.stringify(STRAPI)} || "").replace(/\/$/, "");
+
     const form = document.getElementById("contactForm");
     const msgEl = document.getElementById("formMsg");
     const submitBtn = document.getElementById("submitBtn");
+    const consentEl = document.getElementById("consent");
+
+    const syncSubmitState = () => {
+      submitBtn.disabled = !consentEl.checked;
+      submitBtn.style.opacity = consentEl.checked ? "1" : "0.6";
+      submitBtn.style.cursor = consentEl.checked ? "pointer" : "not-allowed";
+    };
+    consentEl.addEventListener("change", syncSubmitState);
+    syncSubmitState();
 
     const showError = (key, text) => {
       const el = document.querySelector(`[data-error="${key}"]`);
@@ -60,16 +86,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       el.classList.toggle("hidden", !text);
     };
 
-    const clearErrors = () => ["name","email","subject","message","consent"].forEach(k => showError(k, ""));
+    const clearErrors = () =>
+      ["name", "email", "subject", "message", "consent"].forEach((k) => showError(k, ""));
 
     const normalize = (s) => (s || "").trim().replace(/\s+/g, " ");
 
     const validators = {
-      name: (v) => /^[A-Za-zÀ-ÿ0-9\s.'-]{2,60}$/.test(v) ? "" : "Nombre no válido (2-60).",
-      email: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(v) ? "" : "Email no válido.",
-      subject: (v) => /^.{3,80}$/.test(v) ? "" : "Asunto no válido (3-80).",
-      message: (v) => /^.{10,2000}$/s.test(v) ? "" : "Mensaje no válido (10-2000).",
-      consent: (v) => v ? "" : "Debes aceptar la política."
+      name: (v) => (/^[A-Za-zÀ-ÿ0-9\s.'-]{2,60}$/).test(v) ? "" : "Nombre no válido (2-60).",
+      email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i).test(v) ? "" : "Email no válido.",
+      subject: (v) => (/^.{3,80}$/).test(v) ? "" : "Asunto no válido (3-80).",
+      message: (v) => (/^.{10,2000}$/s).test(v) ? "" : "Mensaje no válido (10-2000).",
+      consent: (v) => (v ? "" : "Debes aceptar la política."),
     };
 
     form.addEventListener("submit", async (e) => {
@@ -87,40 +114,56 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         email: validators.email(email),
         subject: validators.subject(subject),
         message: validators.message(message),
-        consent: validators.consent(consent)
+        consent: validators.consent(consent),
       };
 
       let hasError = false;
-      for (const [k,v] of Object.entries(errors)) {
+      for (const [k, v] of Object.entries(errors)) {
         if (v) { showError(k, v); hasError = true; }
       }
       if (hasError) return;
 
+      if (!STRAPI_URL) {
+        msgEl.classList.remove("hidden");
+        msgEl.textContent = "Falta configurar PUBLIC_STRAPI_URL en el .env del frontend.";
+        return;
+      }
+
       submitBtn.disabled = true;
       msgEl.classList.remove("hidden");
+      msgEl.style.color = "rgba(229,229,229,0.75)";
       msgEl.textContent = "Enviando...";
 
       try {
-        const res = await fetch("/api/contact", {
+        const res = await fetch(`${STRAPI_URL}/api/contact-submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, subject, message, consent })
+          body: JSON.stringify({ data: { name, email, subject, message, consent } }),
         });
 
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-          msgEl.textContent = data?.error || "Error al enviar. Inténtalo de nuevo.";
-          submitBtn.disabled = false;
+          const errMsg =
+            data?.error?.message ||
+            data?.error?.details?.errors?.[0]?.message ||
+            data?.message ||
+            `Error al enviar (HTTP ${res.status}).`;
+          msgEl.style.color = "#f87171";
+          msgEl.textContent = errMsg;
           return;
         }
 
+        msgEl.style.color = "#4ade80";
         msgEl.textContent = "¡Mensaje enviado! Gracias 😊";
         form.reset();
+        syncSubmitState();
       } catch {
+        msgEl.style.color = "#f87171";
         msgEl.textContent = "Error de red. Inténtalo más tarde.";
       } finally {
         submitBtn.disabled = false;
+        syncSubmitState();
       }
     });
   </script>

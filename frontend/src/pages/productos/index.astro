@@ -5,10 +5,22 @@ import ProductCard from "../../components/ProductCard.astro";
 import Pagination from "../../components/Pagination.astro";
 import ProductsToolbar from "../../components/ProductsToolbar.jsx";
 
+const normalize = (s = "") =>
+  s
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, ""); // quita acentos
+
+const escapeRegex = (s = "") => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const query = (q ?? "").trim();
+const re = query ? new RegExp(escapeRegex(normalize(query)), "i") : null;
 const { url } = Astro;
 const params = new URL(url).searchParams;
 
 const q = params.get("q") ?? "";
+
+
 const cat = params.get("cat") ?? "";
 const sort = params.get("sort") ?? "createdAt:desc";
 const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
@@ -39,6 +51,14 @@ try {
   const categoriesData = await categoriesRes.json();
 
   products = productsData?.data ?? [];
+  const itemsRegexFiltered = re
+  ? items.filter((p) => {
+      const haystack = normalize(
+        `${p.name ?? ""} ${p.shortDescription ?? ""} ${p.description ?? ""}`
+      );
+      return re.test(haystack);
+    })
+  : items;
   pageCount = productsData?.meta?.pagination?.pageCount ?? 1;
   total = productsData?.meta?.pagination?.total ?? 0;
   categories = categoriesData?.data ?? [];

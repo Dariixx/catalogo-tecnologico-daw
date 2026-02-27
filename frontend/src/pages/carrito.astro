@@ -1,0 +1,100 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Carrito | ZetaGadget" description="Tu carrito de compra">
+  <section class="max-w-5xl mx-auto px-4 py-10">
+    <h1 class="text-3xl font-semibold">Carrito</h1>
+    <p class="mt-2 text-sm opacity-70">Revisa tus productos antes de continuar.</p>
+
+    <div id="cartRoot" class="mt-8"></div>
+  </section>
+
+  <script type="module">
+    import { getCart, removeFromCart, setQty, clearCart } from "../lib/cart.js";
+
+    const root = document.getElementById("cartRoot");
+
+    const money = (n) => new Intl.NumberFormat("es-ES", {
+      style: "currency", currency: "EUR"
+    }).format(Number(n || 0));
+
+    function render() {
+      const items = getCart();
+      if (!items.length) {
+        root.innerHTML = `
+          <div class="rounded-xl p-6" style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
+            <p class="opacity-80">Tu carrito está vacío.</p>
+            <a href="/productos" class="inline-block mt-4 px-4 py-2 rounded-lg font-semibold"
+               style="background:#1e88e5;color:#fff;">Ver productos</a>
+          </div>
+        `;
+        return;
+      }
+
+      const total = items.reduce((acc, it) => acc + (Number(it.price) * (it.qty || 1)), 0);
+
+      root.innerHTML = `
+        <div class="grid gap-4">
+          ${items.map(it => `
+            <div class="flex gap-4 items-center rounded-xl p-4"
+                 style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
+              <div class="flex-1">
+                <div class="font-semibold">${it.name}</div>
+                <div class="text-sm opacity-70">${money(it.price)}</div>
+              </div>
+
+              <input data-qty="${it.id}" type="number" min="1" value="${it.qty || 1}"
+                     class="w-20 rounded-md px-2 py-1"
+                     style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);" />
+
+              <button data-remove="${it.id}" class="px-3 py-1 rounded-lg text-sm font-semibold"
+                      style="background: rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25);">
+                Quitar
+              </button>
+            </div>
+          `).join("")}
+
+          <div class="flex items-center justify-between rounded-xl p-4"
+               style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
+            <div class="text-lg font-bold">Total: ${money(total)}</div>
+            <div class="flex gap-2">
+              <button id="clearBtn" class="px-4 py-2 rounded-lg font-semibold"
+                      style="background: rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10);">
+                Vaciar
+              </button>
+              <a href="/contacto" class="px-4 py-2 rounded-lg font-semibold"
+                 style="background:#1e88e5;color:#fff;">
+                Finalizar (demo)
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+
+      root.querySelectorAll("[data-remove]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          removeFromCart(btn.dataset.remove);
+          render();
+        });
+      });
+
+      root.querySelectorAll("[data-qty]").forEach(inp => {
+        inp.addEventListener("change", () => {
+          const id = inp.dataset.qty;
+          const qty = Math.max(1, Number(inp.value || 1));
+          setQty(id, qty);
+          render();
+        });
+      });
+
+      document.getElementById("clearBtn").addEventListener("click", () => {
+        clearCart();
+        render();
+      });
+    }
+
+    render();
+    window.addEventListener("cart:updated", render);
+  </script>
+</BaseLayout>

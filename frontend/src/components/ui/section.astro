@@ -1,0 +1,14 @@
+---
+const { class: className = "", size = "md" } = Astro.props;
+
+const sizes = {
+  sm: "py-10",
+  md: "py-14",
+  lg: "py-18",
+};
+
+const py = sizes[size] ?? sizes.md;
+---
+<section class={`${py} ${className}`}>
+  <slot />
+</section>

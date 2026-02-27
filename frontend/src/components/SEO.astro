@@ -1,32 +1,24 @@
 ---
-// src/components/SEO.astro
-
 interface Props {
   title?: string;
   description?: string;
   canonical?: string;
   image?: string;
 }
-
-const {
-  title,
-  description,
-  canonical,
-  image,
-} = Astro.props;
+const { title, description, canonical, image } = Astro.props;
 ---
 
 {title && <title>{title}</title>}
+<meta name="robots" content="index,follow" />
 {description && <meta name="description" content={description} />}
 {canonical && <link rel="canonical" href={canonical} />}
 
-<!-- Open Graph -->
 {title && <meta property="og:title" content={title} />}
 {description && <meta property="og:description" content={description} />}
 {canonical && <meta property="og:url" content={canonical} />}
+<meta property="og:type" content="website" />
 {image && <meta property="og:image" content={image} />}
 
-<!-- Twitter Card -->
 <meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
 {title && <meta name="twitter:title" content={title} />}
 {description && <meta name="twitter:description" content={description} />}

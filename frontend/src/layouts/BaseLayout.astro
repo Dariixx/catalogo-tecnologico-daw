@@ -3,35 +3,52 @@ import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import SEO from "../components/SEO.astro";
+import { site } from "../config/site";
+import { getSiteSettings } from "../lib/site-settings.js";
+import { STRAPI_URL } from "../lib/urls.js";
 
-// Props típicos
 const {
-  title = "ZetaGadget",
-  description = "",
-  image, // puede ser absolute o relativa o undefined
-  canonical, // puede ser relativa o undefined
+  title = site.defaultTitle || site.name,
+  description = site.defaultDescription || "",
+  image,
+  canonical,
+  noindex = false,
 } = Astro.props;
 
-// Base del sitio (FRONT) para canonical/og:url
-// IMPORTANTE: pon en .env SITE_URL=https://zetagadget.es
 const SITE_URL = (import.meta.env.SITE_URL || Astro.site?.toString() || "").replace(/\/$/, "");
 
-// Helper seguro para absolutas
-const toAbsolute = (value) => {
+const toAbsolute = (value, base) => {
   if (!value) return undefined;
   try {
-    // Si ya es absoluta, perfecto
     if (typeof value === "string" && /^https?:\/\//i.test(value)) return value;
-    // Si es relativa, la unimos al SITE_URL
-    if (SITE_URL) return new URL(value, SITE_URL).toString();
+    if (base) return new URL(value, base).toString();
   } catch {
     return undefined;
   }
   return undefined;
 };
 
-const canonicalUrl = toAbsolute(canonical || Astro.url.pathname);
-const ogImage = toAbsolute(image);
+const canonicalUrl = toAbsolute(canonical || Astro.url.pathname, SITE_URL);
+const ogImage = toAbsolute(image, SITE_URL);
+
+// Site settings from Strapi (optional)
+const settings = await getSiteSettings().catch(() => null);
+
+// Resolver media de Strapi si viene como /uploads/...
+const mediaAbs = (maybeUrl) => {
+  if (!maybeUrl) return undefined;
+  if (/^https?:\/\//i.test(maybeUrl)) return maybeUrl;
+  // Si Strapi devuelve URL relativa, la resolvemos contra STRAPI_URL
+  return toAbsolute(maybeUrl, STRAPI_URL);
+};
+
+const brand = {
+  name: settings?.name || site.name,
+  tagline: settings?.tagline || site.tagline,
+  logoSrc: mediaAbs(settings?.logo?.url) || site.logo.src,
+  logoAlt: settings?.logo?.alternativeText || site.logo.alt,
+  faviconHref: mediaAbs(settings?.favicon?.url) || site.favicon.href,
+};
 ---
 
 <!doctype html>
@@ -40,19 +57,75 @@ const ogImage = toAbsolute(image);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <SEO
-      title={title}
-      description={description}
-      canonical={canonicalUrl}
-      image={ogImage}
-    />
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+<meta name="theme-color" content="#0f1115" />
+
+    <SEO title={title} description={description} canonical={canonicalUrl} image={ogImage} />
+    {noindex && <meta name="robots" content="noindex,nofollow" />}
   </head>
 
-  <body style="background:#0f1115;color:#e5e5e5;">
-    <Header />
+  <body>
+    <Header brand={brand} />
+    <div
+  id="route-loading"
+  class="fixed left-0 top-0 h-[3px] w-full z-[9999] opacity-0 transition-opacity duration-200"
+  style="background: linear-gradient(90deg, rgba(30,136,229,0.0), rgba(58,160,255,0.9), rgba(30,136,229,0.0));"
+>
+  <div
+    id="route-loading-bar"
+    class="h-full w-0"
+    style="background: rgba(58,160,255,0.85);"
+  ></div>
+</div>
     <main class="min-h-[70vh]">
       <slot />
     </main>
-    <Footer />
+    <Footer brand={brand} />
+    <script>
+  const loading = document.getElementById("route-loading");
+  const bar = document.getElementById("route-loading-bar");
+
+  const start = () => {
+    if (!loading || !bar) return;
+    loading.style.opacity = "1";
+    bar.style.width = "20%";
+    bar.style.transition = "width 200ms ease";
+
+    // anima progresivo (sin bloquear)
+    setTimeout(() => (bar.style.width = "55%"), 180);
+    setTimeout(() => (bar.style.width = "80%"), 420);
+  };
+
+  const done = () => {
+    if (!loading || !bar) return;
+    bar.style.width = "100%";
+    bar.style.transition = "width 180ms ease";
+    setTimeout(() => {
+      loading.style.opacity = "0";
+      bar.style.width = "0%";
+      bar.style.transition = "none";
+    }, 220);
+  };
+
+  // Start en clicks de navegación
+  document.addEventListener("click", (e) => {
+    const a = e.target?.closest?.("a");
+    if (!a) return;
+
+    const href = a.getAttribute("href");
+    if (!href) return;
+
+    // Ignorar anchors, new tab, externos
+    if (href.startsWith("#")) return;
+    if (a.target === "_blank") return;
+    if (href.startsWith("http")) return;
+
+    start();
+  });
+
+  // Done cuando carga la nueva página
+  window.addEventListener("pageshow", done);
+</script>
   </body>
 </html>

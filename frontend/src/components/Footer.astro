@@ -1,30 +1,25 @@
 ---
-// src/components/Footer.astro
+import { site } from "../config/site";
+const { brand } = Astro.props;
+
 const year = new Date().getFullYear();
-const links = [
-  { label: "Productos", href: "/productos" },
-  { label: "Categorías", href: "/categorias" },
-  { label: "Blog", href: "/blog" },
-];
+const links = site.footerLinks;
 ---
+
 <footer style="background:#151a22; border-top:1px solid rgba(255,255,255,0.08);">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="container-page py-10">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-8">
 
       <div class="flex flex-col gap-2">
-        <a href="/" class="flex items-center gap-2 group w-fit">
-          <img
-            src="/logo.png"
-            alt="ZetaGadget"
-            class="h-7 w-auto opacity-90 transition-opacity duration-200 group-hover:opacity-100"
-            onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"
+       <a href="/" class="flex items-center gap-2 group w-fit">
+      <img
+          src="/brand/logo-nombre.png"
+          alt="ZetaGadget"
+        class="h-20 w-auto opacity-90 transition-opacity duration-200 group-hover:opacity-100"
           />
-          <span class="hidden items-center gap-1 text-base font-bold tracking-tight" style="color:#e5e5e5;">
-            <span style="color:#1e88e5;">Zeta</span>Gadget
-          </span>
         </a>
         <p class="text-xs" style="color: rgba(229,229,229,0.45);">
-          Tu tienda tech de confianza.
+          {brand?.tagline || site.tagline}
         </p>
       </div>
 
@@ -45,9 +40,9 @@ const links = [
   </div>
 
   <div style="border-top:1px solid rgba(255,255,255,0.06);">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div class="container-page py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
       <p class="text-xs" style="color: rgba(229,229,229,0.4);">
-        © {year} ZetaGadget. Todos los derechos reservados.
+        © {year} {brand?.name || site.name}. Todos los derechos reservados.
       </p>
       <p class="text-xs flex items-center gap-1" style="color: rgba(229,229,229,0.3);">
         Hecho con <span class="font-medium" style="color: rgba(229,229,229,0.45);">Astro</span> +{" "}
