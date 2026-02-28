@@ -16,6 +16,7 @@ interface Props {
 }
 
 const { article } = Astro.props;
+
 const {
   title,
   slug,
@@ -38,113 +39,98 @@ const formattedDate = publishedAt
 ---
 
 <article
-  class="group flex flex-col rounded-xl overflow-hidden transition-all duration-300"
-  style="background: #151a22; border: 1px solid rgba(255,255,255,0.08);"
-  onmouseover="this.style.border='1px solid rgba(30,136,229,0.35)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 32px rgba(30,136,229,0.08)';"
-  onmouseout="this.style.border='1px solid rgba(255,255,255,0.08)'; this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+  class="group flex flex-col overflow-hidden rounded-2xl transition-all duration-300"
+  style="
+    background:#151a22;
+    border:1px solid rgba(255,255,255,0.08);
+  "
 >
+  <!-- Cover (ratio fijo para no “bailar” el grid) -->
+  <a href={articleUrl} class="block overflow-hidden" aria-label={`Abrir artículo: ${title}`}>
+    <div class="relative w-full aspect-[16/9]" style="background: rgba(255,255,255,0.03);">
+      {coverUrl ? (
+        <img
+          src={coverUrl}
+          alt={title}
+          class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <div class="absolute inset-0 flex items-center justify-center">
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none" aria-hidden="true">
+            <rect width="56" height="56" rx="14" fill="rgba(30,136,229,0.08)"/>
+            <path d="M16 18h24M16 26h24M16 34h16" stroke="rgba(229,229,229,0.22)" stroke-width="2" stroke-linecap="round"/>
+            <rect x="13" y="14" width="30" height="28" rx="4" fill="none" stroke="rgba(229,229,229,0.14)" stroke-width="2"/>
+          </svg>
+        </div>
+      )}
 
-  <!-- Cover -->
-  <a href={articleUrl} class="block overflow-hidden shrink-0" tabindex="-1" aria-hidden="true">
-    {coverUrl ? (
-      <img
-        src={coverUrl}
-        alt={title}
-        class="w-full h-44 object-cover transition-transform duration-500 group-hover:scale-105"
-        loading="lazy"
-        decoding="async"
-      />
-    ) : (
+      <!-- degradado inferior para legibilidad -->
       <div
-        class="w-full h-44 flex items-center justify-center"
-        style="background: rgba(255,255,255,0.03);"
-      >
-        <svg
-          width="44"
-          height="44"
-          viewBox="0 0 44 44"
-          fill="none"
-          aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect width="44" height="44" rx="10" fill="rgba(30,136,229,0.07)" />
-          <path
-            d="M13 14h18M13 20h18M13 26h12"
-            stroke="rgba(229,229,229,0.18)"
-            stroke-width="1.5"
-            stroke-linecap="round"
-          />
-          <rect
-            x="9"
-            y="10"
-            width="26"
-            height="24"
-            rx="3"
-            fill="none"
-            stroke="rgba(229,229,229,0.12)"
-            stroke-width="1.5"
-          />
-        </svg>
-      </div>
-    )}
+        aria-hidden="true"
+        class="absolute inset-x-0 bottom-0 h-16"
+        style="background: linear-gradient(to top, rgba(0,0,0,0.45), transparent);"
+      ></div>
+    </div>
   </a>
 
-  <!-- Contenido -->
-  <div class="flex flex-col flex-1 p-5 gap-3">
-
-    <!-- Título -->
-    <a href={articleUrl}>
+  <!-- Content -->
+  <div class="flex flex-col flex-1 p-5 sm:p-6 gap-3">
+    <!-- Title -->
+    <a href={articleUrl} class="block">
       <h2
-        class="text-base font-semibold leading-snug transition-colors duration-200 line-clamp-2"
-        style="color: #e5e5e5;"
-        onmouseover="this.style.color='#3aa0ff';"
-        onmouseout="this.style.color='#e5e5e5';"
+        class="text-base sm:text-lg font-bold leading-snug line-clamp-2 transition-colors duration-200"
+        style="color:#e5e5e5;"
       >
         {title}
       </h2>
     </a>
 
-    <!-- Descripción -->
+    <!-- Description -->
     {description && (
-      <p
-        class="text-sm leading-relaxed line-clamp-2 flex-1"
-        style="color: rgba(229,229,229,0.55);"
-      >
+      <p class="text-sm leading-relaxed line-clamp-2" style="color: rgba(229,229,229,0.58);">
         {description}
       </p>
     )}
 
-    <!-- Meta -->
+    <!-- Meta chips -->
     {(authorName || formattedDate || readingTime) && (
-      <div
-        class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 mt-auto"
-        style="border-top: 1px solid rgba(255,255,255,0.06);"
-      >
+      <div class="mt-1 flex flex-wrap gap-2">
         {authorName && (
-          <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.5);">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style="background: rgba(255,255,255,0.04); color: rgba(229,229,229,0.72); border:1px solid rgba(255,255,255,0.08);"
+          >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2" />
-              <path d="M1.5 10.5c0-2.485 2.015-4 4.5-4s4.5 1.515 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              <circle cx="6" cy="4" r="2.2" stroke="currentColor" stroke-width="1.2" />
+              <path d="M2 11c0-2.1 1.9-3.4 4-3.4S10 8.9 10 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
             </svg>
             {authorName}
           </span>
         )}
 
         {formattedDate && (
-          <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style="background: rgba(255,255,255,0.04); color: rgba(229,229,229,0.62); border:1px solid rgba(255,255,255,0.08);"
+          >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2" />
-              <path d="M4 1v2M8 1v2M1 5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              <rect x="1.2" y="2.2" width="9.6" height="8.6" rx="1.6" stroke="currentColor" stroke-width="1.2" />
+              <path d="M4 1.2v2M8 1.2v2M1.2 5h9.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
             </svg>
             {formattedDate}
           </span>
         )}
 
         {readingTime && (
-          <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
+          <span
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style="background: rgba(30,136,229,0.10); color: #3aa0ff; border:1px solid rgba(30,136,229,0.20);"
+          >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" />
-              <path d="M6 3.5V6l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="6" cy="6" r="4.6" stroke="currentColor" stroke-width="1.2" />
+              <path d="M6 3.6V6l1.6 1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             {readingTime} min
           </span>
@@ -153,19 +139,32 @@ const formattedDate = publishedAt
     )}
 
     <!-- CTA -->
-    
+    <div class="mt-auto pt-4" style="border-top: 1px solid rgba(255,255,255,0.06);">
       <a
-      href={articleUrl}
-          class="mt-2 inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200 w-fit"
-          style="color: rgba(30,136,229,0.9);"
-          onmouseover="this.style.color='#3aa0ff';"
-          onmouseout="this.style.color='rgba(30,136,229,0.9)';"
+        href={articleUrl}
+        class="inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
+        style="color: rgba(58,160,255,0.9);"
         aria-label={`Leer artículo: ${title}`}
-        >
+      >
         Leer artículo
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-      <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-  </svg>
-</a>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:translate-x-0.5">
+          <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </a>
+    </div>
   </div>
 </article>
+
+<style>
+  /* Hover sin JS inline (mejor rendimiento y menos “rareza” en mobile) */
+  article:hover {
+    border-color: rgba(58,160,255,0.28) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 44px rgba(30,136,229,0.10);
+  }
+
+  /* título en hover */
+  article:hover h2 {
+    color: #3aa0ff;
+  }
+</style>

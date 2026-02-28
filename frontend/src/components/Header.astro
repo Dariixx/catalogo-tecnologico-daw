@@ -58,25 +58,26 @@ const isActiveLink = (href) =>
       <!-- Right Desktop -->
       <div class="hidden md:flex items-center gap-3">
         <!-- Carrito icon -->
-        <a href="/carrito" class="relative w-10 h-10 grid place-items-center rounded-lg"
-           style="border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);" aria-label="Carrito">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 6h15l-1.5 9h-12L6 6Z" stroke="rgba(229,229,229,0.9)" stroke-width="1.6" stroke-linejoin="round"/>
-            <path d="M6 6 5 3H2" stroke="rgba(229,229,229,0.9)" stroke-width="1.6" stroke-linecap="round"/>
-            <circle cx="9" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
-            <circle cx="18" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
-          </svg>
-          <span id="cartBadge" class="absolute -top-2 -right-2 text-xs font-bold px-2 py-0.5 rounded-full hidden"
-                style="background:#1e88e5;color:#fff;">0</span>
-        </a>
-
-        <a
-          href={site.primaryCta.href}
-          class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200"
-          style="background:#1e88e5; color:#fff;"
+        <button
+        type="button"
+        class="relative w-10 h-10 grid place-items-center rounded-lg"
+      style="border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);"
+        aria-label="Carrito"
+      onclick="window.openCart && window.openCart()"
         >
-          {site.primaryCta.label}
-        </a>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 6h15l-1.5 9h-12L6 6Z" stroke="rgba(229,229,229,0.9)" stroke-width="1.6" stroke-linejoin="round"/>
+        <path d="M6 6 5 3H2" stroke="rgba(229,229,229,0.9)" stroke-width="1.6" stroke-linecap="round"/>
+       <circle cx="9" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
+       <circle cx="18" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
+      </svg>
+
+       <span
+          id="cartBadge"
+        class="absolute -top-2 -right-2 text-xs font-bold px-2 py-0.5 rounded-full hidden"
+        style="background:#1e88e5;color:#fff;"
+       >0</span>
+    </button>
       </div>
 
       <!-- Burger Mobile -->

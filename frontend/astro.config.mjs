@@ -5,8 +5,11 @@ import tailwindcss from "@tailwindcss/vite";
 import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
-  // Astro usa esta propiedad para sitemap/canonical
   site: process.env.SITE_URL || "https://zetagadget.es",
+  output: "static",
+  build: {
+    format: "directory",
+  },
   vite: {
     plugins: [tailwindcss()],
   },

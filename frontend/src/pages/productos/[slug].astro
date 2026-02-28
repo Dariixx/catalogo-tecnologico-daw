@@ -15,13 +15,10 @@ export async function getStaticPaths() {
     return [];
   }
 }
-const { slug } = Astro.params;
 
-// IMPORTANTE: encode slug para evitar URLs rotas
+const { slug } = Astro.params;
 const safeSlug = encodeURIComponent(slug);
 
-// Si tu strapiFetch ya añade /api, esto está bien.
-// Si NO lo añade, tendrías que usar `/api/products...`
 const res = await strapiFetch(
   `/products?filters[slug][$eq]=${safeSlug}&populate=images,category,category.category,seo.shareImage,specifications`
 );
@@ -29,67 +26,207 @@ const res = await strapiFetch(
 const item = res?.data?.[0];
 if (!item) return Astro.redirect("/productos");
 
-// Compatible con Strapi v4 (attributes) y v5/otros (objeto plano)
 const p = item.attributes ?? item;
 
-// SEO fallback seguro
+/* SEO */
 const title = p?.seo?.metaTitle ?? `${p?.name ?? "Producto"} | ZetaGadget`;
 const description = p?.seo?.metaDescription ?? p?.shortDescription ?? "";
-
-// Imagen: prioriza SEO shareImage, si no la primera del producto
-const rawImageUrl =
+const rawImage =
   p?.seo?.shareImage?.data?.attributes?.url ??
   p?.images?.data?.[0]?.attributes?.url ??
   null;
 
-const image = rawImageUrl ? absoluteUrl(rawImageUrl) : undefined;
+const image = rawImage ? absoluteUrl(rawImage) : undefined;
+const canonical = `/productos/${p?.slug ?? slug}`;
 
-// Canonical: normalmente en BaseLayout lo conviertes a absoluto.
-// Si BaseLayout espera string, esto vale.
-const canonical = p?.slug ? `/productos/${p.slug}` : `/productos/${slug}`;
+/* Datos */
+const priceNumber = Number(p?.price ?? 0);
+const formattedPrice =
+  priceNumber > 0
+    ? new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(priceNumber)
+    : "";
+
+const stock = Number(p?.stock ?? 0);
+const inStock = stock > 0;
+
+const images = (p?.images?.data ?? [])
+  .map((x) => x?.attributes ?? x)
+  .filter(Boolean);
+
+const mainImage = images?.[0]?.url ? absoluteUrl(images[0].url) : null;
+
+const cat = p?.category?.data?.attributes ?? p?.category ?? null;
+const parentCat = cat?.category?.data?.attributes ?? cat?.category ?? null;
+
+const specs =
+  Array.isArray(p?.specifications)
+    ? p.specifications
+    : Array.isArray(p?.specifications?.data)
+      ? p.specifications.data.map((x) => x.attributes ?? x)
+      : [];
+
+const longDescription = p?.description ?? null;
+const featured = !!p?.featured;
 ---
 
 <BaseLayout title={title} description={description} image={image} canonical={canonical}>
-  <section style="max-width:1100px;margin:0 auto;padding:3.5rem 1rem;">
-    <a href="/productos" style="opacity:.75;text-decoration:none;">← Volver</a>
+  <main class="container-page py-10">
 
-    <h1 style="font-size:2.2rem;margin:1rem 0;font-weight:900;">
-      {p?.name}
-    </h1>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start;">
-      <div style="border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.03);">
-        {p?.images?.data?.[0]?.attributes?.url ? (
-          <img
-            src={absoluteUrl(p.images.data[0].attributes.url)}
-            alt={p?.name ?? "Producto"}
-            style="width:100%;display:block;"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div style="aspect-ratio:1;background:#111318"></div>
+    <!-- Breadcrumb -->
+    <nav class="mb-8">
+      <ol class="flex flex-wrap items-center gap-1.5 text-sm px-4 py-3 rounded-2xl"
+        style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);">
+        <li><a href="/" style="color:rgba(229,229,229,.55)">Inicio</a></li>
+        <li>›</li>
+        <li><a href="/productos" style="color:rgba(229,229,229,.55)">Productos</a></li>
+        {cat && (
+          <>
+            <li>›</li>
+            <li>
+              <a href={`/categorias/${cat.slug}`} style="color:rgba(229,229,229,.55)">
+                {parentCat ? `${parentCat.name} / ` : ""}{cat.name}
+              </a>
+            </li>
+          </>
         )}
-      </div>
+        <li>›</li>
+        <li class="font-semibold" style="color:#e5e5e5">{p?.name}</li>
+      </ol>
+    </nav>
 
-      <div style="border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px;background:rgba(255,255,255,.03);">
-        <div style="opacity:.7;text-transform:uppercase;letter-spacing:.08em;font-size:.8rem;">
-          {p?.category?.data?.attributes?.category?.data?.attributes?.name
-            ? `${p.category.data.attributes.category.data.attributes.name} / `
-            : ""}
-          {p?.category?.data?.attributes?.name ?? ""}
+    <!-- GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
+      <!-- IMÁGENES -->
+      <section class="lg:sticky lg:top-24">
+        <div class="rounded-3xl overflow-hidden"
+          style="background:#151a22;border:1px solid rgba(255,255,255,.08);">
+
+          <div class="relative">
+            {featured && (
+              <div class="absolute top-4 left-4 z-10">
+                <span class="px-3 py-1 rounded-full text-xs font-semibold"
+                  style="background:rgba(30,136,229,.2);color:#3aa0ff;">
+                  Destacado
+                </span>
+              </div>
+            )}
+
+            {mainImage ? (
+              <img id="mainImage"
+                src={mainImage}
+                alt={p?.name}
+                class="w-full aspect-[4/3] object-cover" />
+            ) : (
+              <div class="w-full aspect-[4/3] bg-[#0f1115] flex items-center justify-center text-sm text-gray-400">
+                Sin imagen
+              </div>
+            )}
+          </div>
+
+          {images.length > 1 && (
+            <div class="p-4 grid grid-cols-5 gap-3">
+              {images.slice(0,5).map((img) => {
+                const url = absoluteUrl(img.url);
+                return (
+                  <button data-thumb data-src={url}
+                    class="rounded-xl overflow-hidden border border-white/10 hover:border-blue-400 transition">
+                    <img src={url} class="aspect-square object-cover w-full" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <!-- INFO -->
+      <section class="space-y-6">
+
+        <div class="rounded-3xl p-8"
+          style="background:#151a22;border:1px solid rgba(255,255,255,.08);">
+
+          <h1 class="text-3xl font-extrabold text-white">{p?.name}</h1>
+
+          {p?.shortDescription && (
+            <p class="mt-3 text-gray-400">{p.shortDescription}</p>
+          )}
+
+          <div class="mt-6 flex items-center justify-between">
+            <div class="text-3xl font-extrabold text-white">{formattedPrice}</div>
+            <span class={`px-3 py-1 rounded-full text-xs font-semibold ${inStock ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
+              {inStock ? `En stock (${stock})` : "Sin stock"}
+            </span>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              data-add-to-cart
+              data-id={item.id ?? p.slug}
+              data-name={p?.name}
+              data-price={priceNumber}
+              disabled={!inStock}
+              class={`px-5 py-3 rounded-xl font-semibold transition ${
+                inStock
+                  ? "bg-blue-600 hover:bg-blue-500 text-white"
+                  : "bg-white/10 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              Añadir al carrito
+            </button>
+
+            <a href="#" onclick="event.preventDefault(); window.openCart && window.openCart()">
+  Ver carrito
+</a>
+          </div>
         </div>
 
-        <div style="font-weight:900;font-size:1.6rem;margin:10px 0;background:linear-gradient(135deg,#a8f04a,#3dd6f5,#4f8ef7,#8b45e8);-webkit-background-clip:text;color:transparent;">
-          {typeof p?.price === "number" ? `${p.price} €` : (p?.price ? `${p.price} €` : "")}
-        </div>
-
-        {p?.shortDescription && (
-          <p style="opacity:.8;line-height:1.7;">
-            {p.shortDescription}
-          </p>
+        {longDescription && (
+          <div class="rounded-3xl p-8"
+            style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);">
+            <h2 class="text-lg font-semibold text-white">Descripción</h2>
+            <p class="mt-3 text-gray-400">{longDescription}</p>
+          </div>
         )}
-      </div>
+
+        {specs.length > 0 && (
+          <div class="rounded-3xl p-8"
+            style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);">
+            <h2 class="text-lg font-semibold text-white">Especificaciones</h2>
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {specs.slice(0,10).map((s:any)=>(
+                <div class="p-4 rounded-xl border border-white/10 bg-[#151a22]">
+                  <div class="text-xs uppercase text-gray-500">{s?.label ?? s?.name}</div>
+                  <div class="text-white font-semibold mt-1">{s?.value ?? "-"}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </section>
     </div>
-  </section>
+  </main>
+
+  <script type="module">
+    import { addToCart } from "../../lib/cart.js";
+
+    document.querySelectorAll("[data-add-to-cart]").forEach((btn)=>{
+      btn.addEventListener("click", ()=>{
+        addToCart({
+          id: btn.dataset.id,
+          name: btn.dataset.name,
+          price: Number(btn.dataset.price||0)
+        });
+      });
+    });
+
+    document.querySelectorAll("[data-thumb]").forEach((btn)=>{
+      btn.addEventListener("click", ()=>{
+        const src = btn.dataset.src;
+        const main = document.getElementById("mainImage");
+        if(main && src) main.src = src;
+      });
+    });
+  </script>
 </BaseLayout>

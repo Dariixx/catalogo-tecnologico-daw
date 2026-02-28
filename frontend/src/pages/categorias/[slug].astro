@@ -2,41 +2,56 @@
 // src/pages/categorias/[slug].astro
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
-import CategoryCard from "../../components/CategoryCard.astro";
 import Pagination from "../../components/Pagination.astro";
 
+// Para el render (fuera de getStaticPaths)
+const STRAPI_URL =
+  import.meta.env.STRAPI_URL ||
+  process.env.STRAPI_URL ||
+  "https://api.zetagadget.es";
+
 export async function getStaticPaths() {
+  // ✅ IMPORTANTE: define aquí también para build-time
+  const STRAPI_URL_INNER =
+    import.meta.env.STRAPI_URL ||
+    process.env.STRAPI_URL ||
+    "https://api.zetagadget.es";
+
   try {
     const res = await fetch(
-      `${import.meta.env.STRAPI_URL}/api/categories?pagination[limit]=1000&fields=slug`
+      `${STRAPI_URL_INNER}/api/categories?pagination[limit]=1000&fields=slug`
     );
     const data = await res.json();
-    return (data?.data ?? []).map((c: any) => ({
-      params: { slug: c.attributes?.slug ?? c.slug },
-    }));
+
+    return (data?.data ?? [])
+      .map((c: any) => ({
+        params: { slug: c.attributes?.slug ?? c.slug },
+      }))
+      .filter((x: any) => !!x?.params?.slug);
   } catch {
     return [];
   }
 }
 
 const { slug } = Astro.params;
+
+// ✅ Paginación real por query
 const params = new URL(Astro.url).searchParams;
 const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
 const pageSize = 12;
 
 let category: any = null;
 let products: any[] = [];
-let subcategories: any[] = [];
 let pageCount = 1;
 let total = 0;
 
 try {
+  const safeSlug = encodeURIComponent(slug ?? "");
+
   const [catRes, productsRes] = await Promise.all([
+    fetch(`${STRAPI_URL}/api/categories?filters[slug][$eq]=${safeSlug}&populate=*`),
     fetch(
-      `${import.meta.env.STRAPI_URL}/api/categories?filters[slug][$eq]=${slug}&populate=*`
-    ),
-    fetch(
-      `${import.meta.env.STRAPI_URL}/api/products?filters[category][slug][$eq]=${slug}&populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort=createdAt:desc`
+      `${STRAPI_URL}/api/products?filters[category][slug][$eq]=${safeSlug}&populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort=createdAt:desc`
     ),
   ]);
 
@@ -49,238 +64,177 @@ try {
   products = productsData?.data ?? [];
   pageCount = productsData?.meta?.pagination?.pageCount ?? 1;
   total = productsData?.meta?.pagination?.total ?? 0;
-
-  // Subcategorías (si el modelo las tiene)
-  const subRaw = category?.subcategories?.data ?? [];
-  subcategories = subRaw.map((s: any) => s.attributes ?? s);
 } catch (e) {
-  // silencioso
+  category = null;
+  products = [];
+  pageCount = 1;
+  total = 0;
 }
 
 if (!category) return Astro.redirect("/categorias");
 ---
 
 <BaseLayout
-  title={`${category.name} — Categorías ZetaGadget`}
-  description={category.description ?? `Explora los productos de la categoría ${category.name} en ZetaGadget.`}
+  title={`${category.name} — ZetaGadget`}
+  description={category.description ?? `Explora productos de ${category.name} en ZetaGadget.`}
 >
-  <!-- Breadcrumbs -->
-  <nav aria-label="Breadcrumb" class="mb-8">
-    <ol class="flex flex-wrap items-center gap-1.5 text-sm">
-      {[
-        { label: "Inicio", href: "/" },
-        { label: "Categorías", href: "/categorias" },
-        { label: category.name, href: null },
-      ].map((crumb, i) => (
-        <li class="flex items-center gap-1.5">
-          {i > 0 && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path
-                d="M4 2l4 4-4 4"
-                stroke="rgba(229,229,229,0.25)"
-                stroke-width="1.4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          )}
+  <main class="container-page py-10">
 
-          {crumb.href ? (
-            <a
-              href={crumb.href}
-              class="transition-colors duration-200"
-              style="color: rgba(229,229,229,0.45);"
-              onmouseover="this.style.color='#3aa0ff';"
-              onmouseout="this.style.color='rgba(229,229,229,0.45)';"
-            >
-              {crumb.label}
-            </a>
-          ) : (
-            <span class="font-medium" style="color: rgba(229,229,229,0.8);" aria-current="page">
-              {crumb.label}
-            </span>
-          )}
-        </li>
-      ))}
-    </ol>
-  </nav>
-
-  <!-- Header categoría -->
-  <div
-    class="relative rounded-2xl overflow-hidden px-8 py-10 mb-10 flex flex-col gap-3"
-    style="background: #151a22; border: 1px solid rgba(255,255,255,0.08);"
-  >
-    <!-- Glow -->
-    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-      <div
-        class="absolute -top-10 -left-10 w-64 h-48 rounded-full"
-        style="background: radial-gradient(ellipse, rgba(30,136,229,0.1) 0%, transparent 70%); filter: blur(32px);"
-      ></div>
-    </div>
-
-    <!-- Icono + título -->
-    <div class="flex items-center gap-4 z-10">
-      <div
-        class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-        style="background: rgba(30,136,229,0.1); border: 1px solid rgba(30,136,229,0.2);"
+    <!-- Breadcrumb -->
+    <nav class="mb-8">
+      <ol
+        class="flex flex-wrap items-center gap-2 text-sm px-4 py-3 rounded-2xl"
+        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
       >
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-          <rect x="2" y="2" width="7" height="7" rx="1.5" fill="rgba(30,136,229,0.7)" />
-          <rect x="13" y="2" width="7" height="7" rx="1.5" fill="rgba(30,136,229,0.4)" />
-          <rect x="2" y="13" width="7" height="7" rx="1.5" fill="rgba(30,136,229,0.4)" />
-          <rect x="13" y="13" width="7" height="7" rx="1.5" fill="rgba(30,136,229,0.7)" />
-        </svg>
+        <li><a href="/" style="color: rgba(229,229,229,0.55);">Inicio</a></li>
+        <li style="color: rgba(229,229,229,0.25);">›</li>
+        <li><a href="/categorias" style="color: rgba(229,229,229,0.55);">Categorías</a></li>
+        <li style="color: rgba(229,229,229,0.25);">›</li>
+        <li class="font-semibold" style="color: rgba(229,229,229,0.9);">{category.name}</li>
+      </ol>
+    </nav>
+
+    <!-- Header categoría -->
+    <section
+      class="relative rounded-3xl overflow-hidden p-6 sm:p-8 mb-10"
+      style="background: #151a22; border: 1px solid rgba(255,255,255,0.08);"
+    >
+      <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+        <div
+          class="absolute -top-10 -left-10 w-72 h-56 rounded-full"
+          style="background: radial-gradient(ellipse, rgba(30,136,229,0.14) 0%, transparent 70%); filter: blur(34px);"
+        ></div>
       </div>
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-widest mb-0.5" style="color: #1e88e5;">
+
+      <div class="relative z-10">
+        <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">
           Categoría
         </p>
-        <h1 class="text-2xl sm:text-3xl font-bold" style="color: #e5e5e5;">
-          {category.name}
-        </h1>
-      </div>
-    </div>
 
-    {category.description && (
-      <p class="text-sm leading-relaxed max-w-2xl z-10" style="color: rgba(229,229,229,0.55);">
-        {category.description}
-      </p>
-    )}
+        <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+          <h1 class="text-2xl sm:text-3xl font-extrabold" style="color:#e5e5e5;">
+            {category.name}
+          </h1>
 
-    {total > 0 && (
-      <div class="z-10">
-        <span
-          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-          style="background: rgba(30,136,229,0.1); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.2);"
-        >
-          {total} producto{total !== 1 ? "s" : ""}
-        </span>
-      </div>
-    )}
-  </div>
+          {total > 0 && (
+            <span
+              class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold"
+              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
+            >
+              {total} producto{total !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
 
-  <!-- Subcategorías -->
-  {subcategories.length > 0 && (
-    <section class="mb-12">
-      <h2 class="text-base font-semibold mb-4" style="color: rgba(229,229,229,0.7);">
-        Subcategorías
-      </h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {subcategories.map((sub: any) => (
-          <CategoryCard
-            category={{
-              name: sub.name,
-              slug: sub.slug,
-              description: sub.description ?? null,
-            }}
-          />
-        ))}
-      </div>
-    </section>
-  )}
-
-  <!-- Productos -->
-  <section>
-    {subcategories.length > 0 && (
-      <div class="flex items-center gap-3 mb-6 pb-5" style="border-bottom: 1px solid rgba(255,255,255,0.06);">
-        <h2 class="text-lg font-semibold" style="color: #e5e5e5;">
-          Todos los productos
-        </h2>
-        {total > 0 && (
-          <span class="text-sm" style="color: rgba(229,229,229,0.4);">
-            {total} resultado{total !== 1 ? "s" : ""}
-          </span>
+        {category.description && (
+          <p class="mt-4 text-sm sm:text-base leading-relaxed max-w-3xl" style="color: rgba(229,229,229,0.55);">
+            {category.description}
+          </p>
         )}
-      </div>
-    )}
 
-    {products.length > 0 ? (
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {products.map((item: any) => {
-          const p = item.attributes ?? item;
-          const c = p.category?.data?.attributes ?? p.category ?? null;
-          return (
-            <ProductCard
-              product={{
-                name: p.name,
-                slug: p.slug,
-                price: p.price,
-                shortDescription: p.shortDescription ?? p.short_description,
-                imageUrl: p.image?.data?.attributes?.url ?? p.imageUrl ?? null,
-                featured: p.featured ?? false,
-                stock: p.stock ?? 0,
-                category: c ? { name: c.name, slug: c.slug } : undefined,
-              }}
-            />
-          );
-        })}
-      </div>
-    ) : (
-      <!-- Empty state productos -->
-      <div
-        class="relative flex flex-col items-center text-center py-20 px-6 rounded-2xl overflow-hidden"
-        style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
-      >
-        <div aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div
-            class="w-72 h-40 rounded-full"
-            style="background: radial-gradient(ellipse, rgba(30,136,229,0.07) 0%, transparent 70%); filter: blur(28px);"
-          ></div>
-        </div>
-
-        <div
-          class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 z-10"
-          style="background: rgba(30,136,229,0.08); border: 1px solid rgba(30,136,229,0.15);"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.5 6h13M7 13l-1.5 6m11.5-6l1.5 6"
-              stroke="rgba(30,136,229,0.5)"
-              stroke-width="1.4"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <circle cx="9" cy="21" r="1" fill="rgba(30,136,229,0.5)" />
-            <circle cx="19" cy="21" r="1" fill="rgba(30,136,229,0.5)" />
-          </svg>
-        </div>
-
-        <h3 class="text-lg font-semibold mb-2 z-10" style="color: #e5e5e5;">
-          Sin productos en esta categoría
-        </h3>
-        <p class="text-sm max-w-xs mb-7 z-10" style="color: rgba(229,229,229,0.45);">
-          Aún no hay productos disponibles aquí. Explora otras categorías o vuelve pronto.
-        </p>
-
-        <div class="flex flex-wrap justify-center gap-3 z-10">
+        <div class="mt-6 flex flex-wrap gap-3">
           <a
             href="/productos"
-            class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-            style="background: #1e88e5; color: #fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
-            onmouseover="this.style.background='#3aa0ff';"
-            onmouseout="this.style.background='#1e88e5';"
+            class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+            style="background: rgba(30,136,229,0.12); color:#3aa0ff; border:1px solid rgba(30,136,229,0.25);"
           >
-            Ver todos los productos
+            Ver todo el catálogo
           </a>
 
           <a
             href="/categorias"
-            class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-            style="background: rgba(255,255,255,0.04); color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.09);"
-            onmouseover="this.style.color='#e5e5e5'; this.style.borderColor='rgba(255,255,255,0.18)';"
-            onmouseout="this.style.color='rgba(229,229,229,0.7)'; this.style.borderColor='rgba(255,255,255,0.09)';"
+            class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+            style="background: rgba(255,255,255,0.06); color: rgba(229,229,229,0.85); border: 1px solid rgba(255,255,255,0.10);"
           >
             Otras categorías
           </a>
         </div>
       </div>
-    )}
+    </section>
 
-    <!-- Paginación -->
-    {pageCount > 1 && (
-      <div class="mt-12 flex justify-center">
-        <Pagination pagination={{ page, pageCount }} />
+    <!-- Productos -->
+    <section>
+      <div class="flex items-end justify-between gap-3 mb-6">
+        <div>
+          <h2 class="text-lg font-semibold" style="color:#e5e5e5;">Productos</h2>
+          <p class="text-sm" style="color: rgba(229,229,229,0.55);">
+            {total > 0 ? `${total} resultado${total !== 1 ? "s" : ""}` : "Aún sin resultados."}
+          </p>
+        </div>
+
+        {pageCount > 1 && (
+          <p class="text-xs" style="color: rgba(229,229,229,0.35);">
+            Página {page} de {pageCount}
+          </p>
+        )}
       </div>
-    )}
-  </section>
+
+      {products.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {products.map((item: any) => {
+            const p = item.attributes ?? item;
+            const c = p.category?.data?.attributes ?? p.category ?? null;
+
+            return (
+              <ProductCard
+                product={{
+                  id: item.id ?? p.slug,
+                  name: p.name,
+                  slug: p.slug,
+                  price: p.price,
+                  shortDescription: p.shortDescription ?? p.short_description,
+                  imageUrl: p.image?.data?.attributes?.url ?? p.imageUrl ?? null,
+                  featured: p.featured ?? false,
+                  stock: p.stock ?? 0,
+                  category: c ? { name: c.name, slug: c.slug } : undefined,
+                }}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <div
+          class="relative flex flex-col items-center text-center py-20 px-6 rounded-3xl overflow-hidden"
+          style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
+        >
+          <div aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div
+              class="w-72 h-40 rounded-full"
+              style="background: radial-gradient(ellipse, rgba(30,136,229,0.07) 0%, transparent 70%); filter: blur(28px);"
+            ></div>
+          </div>
+
+          <h3 class="text-lg font-semibold mb-2 z-10" style="color: #e5e5e5;">
+            Sin productos en esta categoría
+          </h3>
+          <p class="text-sm max-w-xs mb-7 z-10" style="color: rgba(229,229,229,0.45);">
+            Aún no hay productos disponibles aquí. Explora otras categorías o vuelve pronto.
+          </p>
+
+          <div class="flex flex-wrap justify-center gap-3 z-10">
+            <a
+              href="/productos"
+              class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+              style="background: #1e88e5; color: #fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
+            >
+              Ver todos los productos
+            </a>
+            <a
+              href="/categorias"
+              class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+              style="background: rgba(255,255,255,0.04); color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.09);"
+            >
+              Otras categorías
+            </a>
+          </div>
+        </div>
+      )}
+
+      {pageCount > 1 && (
+        <div class="mt-12 flex justify-center">
+          <Pagination pagination={{ page, pageCount }} />
+        </div>
+      )}
+    </section>
+  </main>
 </BaseLayout>

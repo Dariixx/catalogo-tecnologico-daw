@@ -5,26 +5,32 @@ import ProductCard from "../../components/ProductCard.astro";
 import Pagination from "../../components/Pagination.astro";
 import ProductsToolbar from "../../components/ProductsToolbar.jsx";
 
+const STRAPI_URL =
+  import.meta.env.STRAPI_URL ||
+  process.env.STRAPI_URL ||
+  "https://api.zetagadget.es";
+
+const { url } = Astro;
+const params = new URL(url).searchParams;
+
+const q = params.get("q") ?? "";
+const cat = params.get("cat") ?? "";
+const sort = params.get("sort") ?? "createdAt:desc";
+const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
+const pageSize = 12;
+
 const normalize = (s = "") =>
   s
     .toString()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, ""); // quita acentos
+    .replace(/[\u0300-\u036f]/g, "");
 
 const escapeRegex = (s = "") => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// ✅ regex usando q (ya definido)
 const query = (q ?? "").trim();
 const re = query ? new RegExp(escapeRegex(normalize(query)), "i") : null;
-const { url } = Astro;
-const params = new URL(url).searchParams;
-
-const q = params.get("q") ?? "";
-
-
-const cat = params.get("cat") ?? "";
-const sort = params.get("sort") ?? "createdAt:desc";
-const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
-const pageSize = 12;
 
 let products = [];
 let categories = [];
@@ -39,216 +45,250 @@ try {
     populate: "*",
     sort: `${sortField}:${sortDir ?? "asc"}`,
   });
+
+  // 🔎 filtro Strapi para rendimiento
   if (q) qs.set("filters[name][$containsi]", q);
   if (cat) qs.set("filters[category][slug][$eq]", cat);
 
   const [productsRes, categoriesRes] = await Promise.all([
-    fetch(`${import.meta.env.STRAPI_URL}/api/products?${qs}`),
-    fetch(`${import.meta.env.STRAPI_URL}/api/categories?pagination[limit]=100`),
+    fetch(`${STRAPI_URL}/api/products?${qs}`),
+    fetch(`${STRAPI_URL}/api/categories?pagination[limit]=100&sort=name:asc`),
   ]);
 
   const productsData = await productsRes.json();
   const categoriesData = await categoriesRes.json();
 
   products = productsData?.data ?? [];
-  const itemsRegexFiltered = re
-  ? items.filter((p) => {
-      const haystack = normalize(
-        `${p.name ?? ""} ${p.shortDescription ?? ""} ${p.description ?? ""}`
-      );
-      return re.test(haystack);
-    })
-  : items;
   pageCount = productsData?.meta?.pagination?.pageCount ?? 1;
   total = productsData?.meta?.pagination?.total ?? 0;
   categories = categoriesData?.data ?? [];
 } catch (e) {
-  // silencioso
+  products = [];
+  categories = [];
+  pageCount = 1;
+  total = 0;
 }
 
+// ✅ filtro extra con RegExp (para PDF)
+const productsRegexFiltered = re
+  ? products.filter((item) => {
+      const p = item?.attributes ?? item;
+      const haystack = normalize(
+        `${p.name ?? ""} ${p.shortDescription ?? p.short_description ?? ""} ${p.description ?? ""}`
+      );
+      return re.test(haystack);
+    })
+  : products;
+
 const hasFilters = !!(q || cat);
-const categoryList = categories.map((c: any) => {
+
+const categoryList = categories.map((c) => {
   const a = c.attributes ?? c;
   return { name: a.name, slug: a.slug };
 });
 
 const activeCategoryName = cat
-  ? categoryList.find((c: any) => c.slug === cat)?.name ?? cat
+  ? categoryList.find((c) => c.slug === cat)?.name ?? cat
   : null;
+
+const shownCount = productsRegexFiltered.length;
 ---
 
 <BaseLayout
   title="Productos — ZetaGadget"
   description="Explora nuestro catálogo completo de gadgets y productos tecnológicos."
 >
-  <!-- Header página -->
-  <div class="pb-8 pt-2">
-    <div class="flex flex-col gap-2">
-      <p class="text-xs font-semibold uppercase tracking-widest" style="color: #1e88e5;">
+  <main class="container-page py-10">
+    <!-- Header (card) -->
+    <div
+      class="mb-10 rounded-3xl p-6 sm:p-8"
+      style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
+    >
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">
         Catálogo
       </p>
-      <h1 class="text-3xl sm:text-4xl font-bold" style="color: #e5e5e5;">
-        Productos
-      </h1>
-      <p class="text-sm" style="color: rgba(229,229,229,0.5);">
+
+      <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+        <h1 class="text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">
+          Productos
+        </h1>
+
+        <span
+          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+          style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
+        >
+          {hasFilters
+            ? `${shownCount} resultado${shownCount !== 1 ? "s" : ""}`
+            : `${total} producto${total !== 1 ? "s" : ""}`}
+        </span>
+      </div>
+
+      <p class="mt-2 text-sm sm:text-base" style="color: rgba(229,229,229,0.55);">
         Descubre nuestra selección de gadgets y tecnología premium.
       </p>
-    </div>
-  </div>
 
-  <!-- Toolbar -->
-  <div class="mb-8">
-    <ProductsToolbar client:load categories={categoryList} initial={{ q, category: cat, sort }} />
-  </div>
-
-  <!-- Filtros activos / resumen -->
-  {(hasFilters || total > 0) && (
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <div class="flex flex-wrap items-center gap-2">
-        {total > 0 && (
-          <span class="text-sm" style="color: rgba(229,229,229,0.45);">
-            {total} resultado{total !== 1 ? "s" : ""}
-          </span>
-        )}
-
-        {q && (
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-            style="background: rgba(30,136,229,0.1); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.2);"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-              <circle cx="4.5" cy="4.5" r="3.5" stroke="currentColor" stroke-width="1.2" />
-              <path d="M7 7l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-            </svg>
-            "{q}"
-          </span>
-        )}
-
-        {activeCategoryName && (
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-            style="background: rgba(30,136,229,0.1); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.2);"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-              <rect x="1" y="1" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.7" />
-              <rect x="5.5" y="1" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.4" />
-              <rect x="1" y="5.5" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.4" />
-              <rect x="5.5" y="5.5" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.7" />
-            </svg>
-            {activeCategoryName}
-          </span>
-        )}
-      </div>
-
-      {hasFilters && (
-        <a
-          href="/productos"
-          class="inline-flex items-center gap-1.5 text-xs font-medium transition-colors duration-200"
-          style="color: rgba(229,229,229,0.4);"
-          onmouseover="this.style.color='#e5e5e5';"
-          onmouseout="this.style.color='rgba(229,229,229,0.4)';"
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <path
-              d="M2 2l8 8M10 2l-8 8"
-              stroke="currentColor"
-              stroke-width="1.4"
-              stroke-linecap="round"
-            />
-          </svg>
-          Limpiar filtros
-        </a>
+      {pageCount > 1 && (
+        <p class="mt-2 text-xs" style="color: rgba(229,229,229,0.35);">
+          Página {page} de {pageCount}
+        </p>
       )}
     </div>
-  )}
 
-  <!-- Grid productos -->
-  {products.length > 0 ? (
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-      {products.map((item: any) => {
-        const p = item.attributes ?? item;
-        const catObj = p.category?.data?.attributes ?? p.category ?? null;
-        return (
-          <ProductCard
-            product={{
-              name: p.name,
-              slug: p.slug,
-              price: p.price,
-              shortDescription: p.shortDescription ?? p.short_description,
-              imageUrl: p.image?.data?.attributes?.url ?? p.imageUrl ?? null,
-              featured: p.featured ?? false,
-              stock: p.stock ?? 0,
-              category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
-            }}
-          />
-        );
-      })}
-    </div>
-  ) : (
-    <!-- Empty state -->
+    <!-- Toolbar (panel) -->
     <div
-      class="relative flex flex-col items-center text-center py-20 px-6 rounded-2xl overflow-hidden"
-      style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
+      class="mb-7 rounded-3xl p-4 sm:p-5"
+      style="background:#151a22; border: 1px solid rgba(255,255,255,0.08);"
     >
-      <!-- Glow sutil -->
-      <div aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div
-          class="w-80 h-48 rounded-full"
-          style="background: radial-gradient(ellipse, rgba(30,136,229,0.07) 0%, transparent 70%); filter: blur(32px);"
-        ></div>
-      </div>
+      <ProductsToolbar client:load categories={categoryList} initial={{ q, category: cat, sort }} />
+    </div>
 
-      <!-- Icono -->
+    <!-- Filtros activos / resumen (bar) -->
+    {(hasFilters || total > 0) && (
       <div
-        class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 z-10"
-        style="background: rgba(30,136,229,0.08); border: 1px solid rgba(30,136,229,0.15);"
+        class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
+        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
       >
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="8" stroke="rgba(30,136,229,0.6)" stroke-width="1.6" />
-          <path d="M18 18l5 5" stroke="rgba(30,136,229,0.6)" stroke-width="1.6" stroke-linecap="round" />
-          <path d="M9 12h6M12 9v6" stroke="rgba(229,229,229,0.3)" stroke-width="1.4" stroke-linecap="round" />
-        </svg>
-      </div>
+        <div class="flex flex-wrap items-center gap-2">
+          {q && (
+            <span
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <circle cx="4.5" cy="4.5" r="3.5" stroke="currentColor" stroke-width="1.2" />
+                <path d="M7 7l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              </svg>
+              "{q}"
+            </span>
+          )}
 
-      <h2 class="text-xl font-semibold mb-2 z-10" style="color: #e5e5e5;">
-        {hasFilters ? "Sin resultados para tu búsqueda" : "No hay productos disponibles"}
-      </h2>
-      <p class="text-sm max-w-sm mb-7 z-10" style="color: rgba(229,229,229,0.45);">
-        {hasFilters
-          ? "Prueba con otros términos, cambia la categoría o elimina los filtros activos."
-          : "Vuelve pronto, estamos añadiendo nuevos productos constantemente."}
-      </p>
+          {activeCategoryName && (
+            <span
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <rect x="1" y="1" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.7" />
+                <rect x="5.5" y="1" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.4" />
+                <rect x="1" y="5.5" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.4" />
+                <rect x="5.5" y="5.5" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.7" />
+              </svg>
+              {activeCategoryName}
+            </span>
+          )}
 
-      {hasFilters && (
-        <div class="flex flex-wrap items-center justify-center gap-3 z-10">
+          {hasFilters && (
+            <span class="text-xs" style="color: rgba(229,229,229,0.40);">
+              Tip: prueba otra búsqueda si no encuentras resultados.
+            </span>
+          )}
+        </div>
+
+        {hasFilters && (
           <a
             href="/productos"
-            class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-            style="background: #1e88e5; color: #fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
-            onmouseover="this.style.background='#3aa0ff';"
-            onmouseout="this.style.background='#1e88e5';"
+            class="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors duration-200"
+            style="color: rgba(229,229,229,0.55);"
+            onmouseover="this.style.color='#e5e5e5';"
+            onmouseout="this.style.color='rgba(229,229,229,0.55)';"
           >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
             Limpiar filtros
           </a>
+        )}
+      </div>
+    )}
 
-          <a
-            href="/categorias"
-            class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-            style="background: rgba(255,255,255,0.04); color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.09);"
-            onmouseover="this.style.color='#e5e5e5'; this.style.borderColor='rgba(255,255,255,0.18)';"
-            onmouseout="this.style.color='rgba(229,229,229,0.7)'; this.style.borderColor='rgba(255,255,255,0.09)';"
-          >
-            Ver categorías
-          </a>
+    <!-- Grid productos -->
+    {productsRegexFiltered.length > 0 ? (
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {productsRegexFiltered.map((item) => {
+          const p = item.attributes ?? item;
+          const catObj = p.category?.data?.attributes ?? p.category ?? null;
+
+          return (
+            <ProductCard
+              product={{
+                id: item.id ?? p.slug,
+                name: p.name,
+                slug: p.slug,
+                price: p.price,
+                shortDescription: p.shortDescription ?? p.short_description,
+                imageUrl: p.image?.data?.attributes?.url ?? p.imageUrl ?? null,
+                featured: p.featured ?? false,
+                stock: p.stock ?? 0,
+                category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
+              }}
+            />
+          );
+        })}
+      </div>
+    ) : (
+      <!-- Empty state -->
+      <div
+        class="relative flex flex-col items-center text-center py-20 px-6 rounded-3xl overflow-hidden"
+        style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
+      >
+        <div aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div
+            class="w-80 h-48 rounded-full"
+            style="background: radial-gradient(ellipse, rgba(30,136,229,0.07) 0%, transparent 70%); filter: blur(32px);"
+          ></div>
         </div>
-      )}
-    </div>
-  )}
 
-  <!-- Paginación -->
-  {pageCount > 1 && (
-    <div class="mt-12 flex justify-center">
-      <Pagination pagination={{ page, pageCount }} />
-    </div>
-  )}
+        <div
+          class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 z-10"
+          style="background: rgba(30,136,229,0.08); border: 1px solid rgba(30,136,229,0.15);"
+        >
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="8" stroke="rgba(30,136,229,0.6)" stroke-width="1.6" />
+            <path d="M18 18l5 5" stroke="rgba(30,136,229,0.6)" stroke-width="1.6" stroke-linecap="round" />
+            <path d="M9 12h6M12 9v6" stroke="rgba(229,229,229,0.3)" stroke-width="1.4" stroke-linecap="round" />
+          </svg>
+        </div>
+
+        <h2 class="text-xl font-semibold mb-2 z-10" style="color: #e5e5e5;">
+          {hasFilters ? "Sin resultados para tu búsqueda" : "No hay productos disponibles"}
+        </h2>
+        <p class="text-sm max-w-sm mb-7 z-10" style="color: rgba(229,229,229,0.45);">
+          {hasFilters
+            ? "Prueba con otros términos, cambia la categoría o elimina los filtros activos."
+            : "Vuelve pronto, estamos añadiendo nuevos productos constantemente."}
+        </p>
+
+        {hasFilters && (
+          <div class="flex flex-wrap items-center justify-center gap-3 z-10">
+            <a
+              href="/productos"
+              class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+              style="background: #1e88e5; color: #fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
+              onmouseover="this.style.background='#3aa0ff';"
+              onmouseout="this.style.background='#1e88e5';"
+            >
+              Limpiar filtros
+            </a>
+
+            <a
+              href="/categorias"
+              class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+              style="background: rgba(255,255,255,0.04); color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.09);"
+              onmouseover="this.style.color='#e5e5e5'; this.style.borderColor='rgba(255,255,255,0.18)';"
+              onmouseout="this.style.color='rgba(229,229,229,0.7)'; this.style.borderColor='rgba(255,255,255,0.09)';"
+            >
+              Ver categorías
+            </a>
+          </div>
+        )}
+      </div>
+    )}
+
+    <!-- Paginación -->
+    {pageCount > 1 && (
+      <div class="mt-12 flex justify-center">
+        <Pagination pagination={{ page, pageCount }} />
+      </div>
+    )}
+  </main>
 </BaseLayout>

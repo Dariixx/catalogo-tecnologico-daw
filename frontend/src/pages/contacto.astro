@@ -1,65 +1,155 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-const STRAPI = import.meta.env.PUBLIC_STRAPI_URL;
+
+const STRAPI =
+  import.meta.env.PUBLIC_STRAPI_URL ||
+  import.meta.env.STRAPI_URL ||
+  process.env.PUBLIC_STRAPI_URL ||
+  process.env.STRAPI_URL ||
+  "https://api.zetagadget.es";
 ---
 
 <BaseLayout title="Contacto — ZetaGadget" description="Contacta con ZetaGadget">
   <main class="container-page py-10">
-    <section class="max-w-2xl mx-auto">
-      <h1 class="text-3xl font-semibold">Contacto</h1>
-      <p class="mt-2 text-sm opacity-80">
-        Envíanos tu consulta y te responderemos lo antes posible.
+    <!-- Header card -->
+    <div
+      class="mb-10 rounded-3xl p-6 sm:p-8"
+      style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
+    >
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">
+        Soporte
       </p>
+      <h1 class="mt-2 text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">
+        Contacto
+      </h1>
+      <p class="mt-2 text-sm sm:text-base max-w-2xl" style="color: rgba(229,229,229,0.55);">
+        Envíanos tu consulta y te responderemos lo antes posible. También puedes revisar las respuestas rápidas.
+      </p>
+    </div>
 
-      <form id="contactForm" class="mt-8 space-y-4 panel p-6">
-        <div>
-          <label class="block text-sm font-medium" for="name">Nombre</label>
-          <input class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
-                 style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-                 id="name" name="name" autocomplete="name" required />
-          <p class="mt-1 text-sm text-red-500 hidden" data-error="name"></p>
+    <!-- Layout 2 columnas -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <!-- Form -->
+      <div
+        class="lg:col-span-2 rounded-3xl p-6 sm:p-8"
+        style="background:#151a22; border:1px solid rgba(255,255,255,0.08);"
+      >
+        <div class="flex items-center justify-between gap-3 mb-6">
+          <h2 class="text-lg font-semibold" style="color:#e5e5e5;">Formulario</h2>
+          <span class="text-xs" style="color: rgba(229,229,229,0.35);">Respuesta en 24–48h</span>
         </div>
 
-        <div>
-          <label class="block text-sm font-medium" for="email">Email</label>
-          <input class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
-                 style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-                 id="email" name="email" type="email" autocomplete="email" required />
-          <p class="mt-1 text-sm text-red-500 hidden" data-error="email"></p>
+        <form id="contactForm" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="name">Nombre</label>
+              <input
+                class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+                id="name" name="name" autocomplete="name" required
+              />
+              <p class="mt-1 text-sm text-red-500 hidden" data-error="name"></p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="email">Email</label>
+              <input
+                class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+                id="email" name="email" type="email" autocomplete="email" required
+              />
+              <p class="mt-1 text-sm text-red-500 hidden" data-error="email"></p>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="subject">Asunto</label>
+            <input
+              class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+              style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+              id="subject" name="subject" required
+            />
+            <p class="mt-1 text-sm text-red-500 hidden" data-error="subject"></p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="message">Mensaje</label>
+            <textarea
+              class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+              style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
+              id="message" name="message" rows="7" required
+            ></textarea>
+            <p class="mt-1 text-sm text-red-500 hidden" data-error="message"></p>
+            <p class="mt-2 text-xs" style="color: rgba(229,229,229,0.35);">
+              Consejo: incluye el nombre del producto y el problema (envío, devolución, stock, etc.).
+            </p>
+          </div>
+
+          <div class="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <label class="flex items-start gap-2 text-sm" style="color: rgba(229,229,229,0.75);">
+              <input id="consent" name="consent" type="checkbox" class="mt-1" required />
+              <span>Acepto la política de privacidad.</span>
+            </label>
+            <p class="text-sm text-red-500 hidden" data-error="consent"></p>
+          </div>
+
+          <div class="pt-2 flex items-center gap-3">
+            <button
+              id="submitBtn"
+              type="submit"
+              class="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200"
+              style="background:#1e88e5;color:#fff;border:1px solid #1e88e5; box-shadow: 0 8px 28px rgba(30,136,229,0.18);"
+              onmouseover="this.style.background='#3aa0ff';"
+              onmouseout="this.style.background='#1e88e5';"
+            >
+              Enviar
+            </button>
+            <p id="formMsg" class="text-sm hidden"></p>
+          </div>
+        </form>
+      </div>
+
+      <!-- Panel info -->
+      <aside class="rounded-3xl p-6 sm:p-8 sticky top-24 h-fit"
+        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
+      >
+        <h2 class="text-lg font-semibold" style="color:#e5e5e5;">Respuestas rápidas</h2>
+
+        <div class="mt-4 space-y-4">
+          <div class="rounded-2xl p-4" style="background: rgba(21,26,34,0.7); border:1px solid rgba(255,255,255,0.07);">
+            <p class="text-sm font-semibold" style="color:#e5e5e5;">Envíos</p>
+            <p class="mt-1 text-sm" style="color: rgba(229,229,229,0.55);">
+              Te confirmamos el estado del pedido y el tracking si procede.
+            </p>
+          </div>
+
+          <div class="rounded-2xl p-4" style="background: rgba(21,26,34,0.7); border:1px solid rgba(255,255,255,0.07);">
+            <p class="text-sm font-semibold" style="color:#e5e5e5;">Devoluciones</p>
+            <p class="mt-1 text-sm" style="color: rgba(229,229,229,0.55);">
+              Indícanos el producto y el motivo para ayudarte rápido.
+            </p>
+          </div>
+
+          <div class="rounded-2xl p-4" style="background: rgba(21,26,34,0.7); border:1px solid rgba(255,255,255,0.07);">
+            <p class="text-sm font-semibold" style="color:#e5e5e5;">Soporte</p>
+            <p class="mt-1 text-sm" style="color: rgba(229,229,229,0.55);">
+              Si es un error de la web, añade captura y URL de la página.
+            </p>
+          </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-medium" for="subject">Asunto</label>
-          <input class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
-                 style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-                 id="subject" name="subject" required />
-          <p class="mt-1 text-sm text-red-500 hidden" data-error="subject"></p>
+        <div class="mt-6">
+          <a
+            href="/productos"
+            class="inline-flex items-center justify-center w-full px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+            style="background: rgba(30,136,229,0.12); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.25);"
+            onmouseover="this.style.borderColor='rgba(58,160,255,0.45)';"
+            onmouseout="this.style.borderColor='rgba(30,136,229,0.25)';"
+          >
+            Volver a productos
+          </a>
         </div>
-
-        <div>
-          <label class="block text-sm font-medium" for="message">Mensaje</label>
-          <textarea class="mt-1 w-full rounded-lg px-3 py-2 text-sm outline-none"
-                    style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-                    id="message" name="message" rows="6" required></textarea>
-          <p class="mt-1 text-sm text-red-500 hidden" data-error="message"></p>
-        </div>
-
-        <div>
-          <label class="flex items-start gap-2 text-sm">
-            <input id="consent" name="consent" type="checkbox" class="mt-1" required />
-            <span>Acepto la política de privacidad.</span>
-          </label>
-          <p class="mt-1 text-sm text-red-500 hidden" data-error="consent"></p>
-        </div>
-
-        <div class="pt-2 flex items-center gap-3">
-          <button id="submitBtn" type="submit" class="rounded-lg px-4 py-2 text-sm font-semibold"
-                  style="background:#1e88e5;color:#fff;border:1px solid #1e88e5;">
-            Enviar
-          </button>
-          <p id="formMsg" class="text-sm hidden"></p>
-        </div>
-      </form>
+      </aside>
     </section>
   </main>
 
@@ -126,6 +216,7 @@ const STRAPI = import.meta.env.PUBLIC_STRAPI_URL;
       if (!STRAPI_URL) {
         msgEl.classList.remove("hidden");
         msgEl.textContent = "Falta configurar PUBLIC_STRAPI_URL en el .env del frontend.";
+        msgEl.style.color = "#f87171";
         return;
       }
 
