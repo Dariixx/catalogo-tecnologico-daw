@@ -9,11 +9,38 @@ const STRAPI_URL =
   process.env.STRAPI_URL ||
   "https://api.zetagadget.es";
 
+const toAbs = (maybeUrl) => {
+  if (!maybeUrl) return null;
+  if (/^https?:\/\//i.test(maybeUrl)) return maybeUrl;
+  try {
+    return new URL(maybeUrl, STRAPI_URL).toString();
+  } catch {
+    return null;
+  }
+};
+
+const pickMediaUrl = (media) => {
+  const m =
+    media?.data?.attributes ??
+    media?.data ??
+    media?.attributes ??
+    media ??
+    null;
+
+  const rel =
+    m?.url ??
+    m?.formats?.large?.url ??
+    m?.formats?.medium?.url ??
+    m?.formats?.small?.url ??
+    m?.formats?.thumbnail?.url ??
+    null;
+
+  return toAbs(rel);
+};
+
 export async function getStaticPaths() {
   try {
-    const res = await fetch(
-      `${STRAPI_URL}/api/articles?pagination[limit]=1000&fields=slug`
-    );
+    const res = await fetch(`${STRAPI_URL}/api/articles?pagination[limit]=1000&fields=slug`);
     const data = await res.json();
     return (data?.data ?? []).map((a) => ({
       params: { slug: a.attributes?.slug ?? a.slug },
@@ -30,7 +57,7 @@ let more = [];
 
 try {
   const res = await fetch(
-    `${STRAPI_URL}/api/articles?filters[slug][$eq]=${encodeURIComponent(slug)}&populate=author.avatar,cover,tags`
+    `${STRAPI_URL}/api/articles?filters[slug][$eq]=${encodeURIComponent(slug)}&populate[author][populate]=avatar&populate[cover]=true&populate[tags]=true`
   );
   const data = await res.json();
   const raw = data?.data?.[0];
@@ -38,28 +65,30 @@ try {
 
   if (article) {
     const moreRes = await fetch(
-      `${STRAPI_URL}/api/articles?filters[slug][$ne]=${encodeURIComponent(slug)}&populate=author.avatar,cover,tags&pagination[limit]=3&sort=publishedAt:desc`
+      `${STRAPI_URL}/api/articles?filters[slug][$ne]=${encodeURIComponent(slug)}&populate[author][populate]=avatar&populate[cover]=true&populate[tags]=true&pagination[limit]=3&sort=publishedAt:desc`
     );
     const moreData = await moreRes.json();
     more = moreData?.data ?? [];
   }
-} catch {
-  // silencioso
-}
+} catch {}
 
 if (!article) return Astro.redirect("/blog");
 
 const a = article;
 
-// reading time: soporta blocks + content
 const readingMinutes = getReadingTimeMinutes({
   content: a.content,
   blocks: a.blocks,
 });
 
-const author = a.author?.data?.attributes ?? a.author ?? null;
+const author =
+  a.author?.data?.attributes ??
+  a.author?.data ??
+  a.author ??
+  null;
 
-const coverUrl = a.cover?.data?.attributes?.url ?? a.coverUrl ?? null;
+const coverUrl = pickMediaUrl(a.cover);
+const authorAvatarUrl = pickMediaUrl(author?.avatar);
 
 const publishedAtRaw = a.publishedAt ? new Date(a.publishedAt) : null;
 const publishedAt =
@@ -74,7 +103,7 @@ const tags =
 
 const description = a.description ?? a.excerpt ?? a.title;
 
-// ---------- Renderer básico para blocks (Strapi rich text) ----------
+// ---------- Renderer básico para blocks ----------
 const esc = (s = "") =>
   String(s)
     .replaceAll("&", "&amp;")
@@ -92,14 +121,12 @@ function textFromNode(node) {
   return "";
 }
 
-// Este renderer asume estructura típica: [{ type, children, ... }]
 function renderBlocks(blocks) {
   if (!Array.isArray(blocks) || !blocks.length) return "";
 
   const out = blocks.map((b) => {
     const type = b.type ?? b.__type ?? b.kind;
 
-    // headings
     if (type === "heading" || type === "heading-1" || type === "heading-2" || type === "heading-3" || type === "heading-4") {
       const level = b.level ?? (type === "heading-1" ? 1 : type === "heading-2" ? 2 : type === "heading-3" ? 3 : 4);
       const t = esc(textFromNode(b.children));
@@ -107,20 +134,17 @@ function renderBlocks(blocks) {
       return `<h${tag}>${t}</h${tag}>`;
     }
 
-    // paragraph
     if (type === "paragraph") {
       const t = esc(textFromNode(b.children));
       if (!t.trim()) return "";
       return `<p>${t}</p>`;
     }
 
-    // quote
     if (type === "quote" || type === "blockquote") {
       const t = esc(textFromNode(b.children));
       return `<blockquote>${t}</blockquote>`;
     }
 
-    // list
     if (type === "list" || type === "bulleted-list" || type === "numbered-list") {
       const ordered = b.format === "ordered" || type === "numbered-list";
       const items = (b.children ?? []).map((li) => {
@@ -130,21 +154,19 @@ function renderBlocks(blocks) {
       return ordered ? `<ol>${items}</ol>` : `<ul>${items}</ul>`;
     }
 
-    // code block
     if (type === "code" || type === "code-block") {
       const code = esc(b.code ?? textFromNode(b.children));
       return `<pre><code>${code}</code></pre>`;
     }
 
-    // image (si tu rich text la trae)
     if (type === "image") {
       const url = b.image?.url ?? b.url ?? null;
       const alt = esc(b.alt ?? "");
       if (!url) return "";
-      return `<img src="${esc(url)}" alt="${alt}" loading="lazy" decoding="async" />`;
+      const abs = toAbs(url);
+      return abs ? `<img src="${esc(abs)}" alt="${alt}" loading="lazy" decoding="async" />` : "";
     }
 
-    // fallback: texto plano
     const t = esc(textFromNode(b.children ?? b));
     return t.trim() ? `<p>${t}</p>` : "";
   });
@@ -252,32 +274,32 @@ const blocksHtml = !a.content ? renderBlocks(a.blocks) : "";
       )}
     </header>
 
-    <!-- Layout editorial: contenido + sidebar -->
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 items-start">
-      <!-- CONTENT -->
       <article
         class="rounded-3xl px-6 sm:px-8 py-8"
         style="background:#151a22; border: 1px solid rgba(255,255,255,0.08);"
       >
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2 pb-6 mb-6" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
-          {author?.name && (
+          {(author?.name ?? a.authorName) && (
             <span class="flex items-center gap-2.5 text-sm" style="color: rgba(229,229,229,0.70);">
-              {author.avatar?.data?.attributes?.url ? (
+              {authorAvatarUrl ? (
                 <img
-                  src={author.avatar.data.attributes.url}
-                  alt={author.name}
+                  src={authorAvatarUrl}
+                  alt={author?.name ?? a.authorName}
                   class="w-8 h-8 rounded-full object-cover"
                   style="border: 1px solid rgba(255,255,255,0.10);"
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <span
                   class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold"
                   style="background: rgba(30,136,229,0.15); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.25);"
                 >
-                  {author.name.charAt(0).toUpperCase()}
+                  {(author?.name ?? a.authorName).charAt(0).toUpperCase()}
                 </span>
               )}
-              {author.name}
+              {author?.name ?? a.authorName}
             </span>
           )}
 
@@ -302,7 +324,6 @@ const blocksHtml = !a.content ? renderBlocks(a.blocks) : "";
           )}
         </div>
 
-        <!-- Render HTML o Blocks -->
         {a.content ? (
           <div class="article-content" set:html={a.content} />
         ) : (
@@ -310,7 +331,6 @@ const blocksHtml = !a.content ? renderBlocks(a.blocks) : "";
         )}
       </article>
 
-      <!-- SIDEBAR -->
       <aside class="lg:sticky lg:top-24 space-y-4">
         <div
           class="rounded-3xl p-6"
@@ -357,7 +377,6 @@ const blocksHtml = !a.content ? renderBlocks(a.blocks) : "";
       </aside>
     </div>
 
-    <!-- Más artículos -->
     {more.length > 0 && (
       <section class="mt-14">
         <div class="flex items-end justify-between mb-7 pb-5" style="border-bottom: 1px solid rgba(255,255,255,0.06);">
@@ -385,16 +404,24 @@ const blocksHtml = !a.content ? renderBlocks(a.blocks) : "";
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {more.map((item) => {
-            const m = item.attributes ?? item;
-            const mauthor = m.author?.data?.attributes ?? m.author ?? null;
+          {more.map((item: any) => {
+            const m = item?.attributes ?? item;
+
+            const mauthor =
+              m.author?.data?.attributes ??
+              m.author?.data ??
+              m.author ??
+              null;
+
+            const mCoverAbs = pickMediaUrl(m.cover);
+
             return (
               <ArticleCard
                 article={{
                   title: m.title,
                   slug: m.slug,
                   description: m.description ?? m.excerpt,
-                  coverUrl: m.cover?.data?.attributes?.url ?? m.coverUrl ?? null,
+                  coverUrl: mCoverAbs,
                   authorName: mauthor?.name ?? m.authorName ?? null,
                   publishedAt: m.publishedAt,
                   readingTime: getReadingTimeMinutes({ content: m.content, blocks: m.blocks }),

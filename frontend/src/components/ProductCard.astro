@@ -183,20 +183,27 @@ const formattedPrice = new Intl.NumberFormat("es-ES", {
   </div>
 </article>
 
-<!-- Delegación: un solo listener para toda la página -->
+<!-- ✅ Un solo listener GLOBAL para todas las cards (no se duplica por card) -->
 <script type="module">
-  import { addToCart } from "../lib/cart.js";
+  if (!window.__ZG_CART_LISTENER__) {
+    window.__ZG_CART_LISTENER__ = true;
 
-  document.addEventListener("click", (e) => {
-    const btn = e.target?.closest?.("[data-add-to-cart]");
-    if (!btn) return;
-    if (btn.disabled) return;
+    document.addEventListener("click", (ev) => {
+      const btn = ev.target?.closest?.("[data-add-to-cart]");
+      if (!btn) return;
 
-    addToCart({
-      id: btn.dataset.id,
-      name: btn.dataset.name,
-      price: Number(btn.dataset.price || 0),
-      slug: btn.dataset.slug,
+      const api = window.ZG_CART;
+      if (!api?.addToCart) return;
+
+      api.addToCart({
+        id: btn.dataset.id,
+        name: btn.dataset.name,
+        price: Number(btn.dataset.price || 0),
+        slug: btn.dataset.slug,
+      });
+
+      // Abre panel si existe
+      if (typeof window.openCart === "function") window.openCart();
     });
-  });
+  }
 </script>

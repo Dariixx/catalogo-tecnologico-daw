@@ -1,22 +1,24 @@
 ---
-// src/pages/index.astro
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductCard from "../components/ProductCard.astro";
 import CategoryCard from "../components/CategoryCard.astro";
 import ArticleCard from "../components/ArticleCard.astro";
 import { getReadingTimeMinutes } from "../lib/readingTime";
+import { STRAPI_URL } from "../lib/urls.js";
 
-// --- fetch existente (no tocar) ---
 let featuredProducts = [];
 let categories = [];
 let articles = [];
 
 try {
   const [productsRes, categoriesRes, articlesRes] = await Promise.all([
-    fetch(`${import.meta.env.STRAPI_URL}/api/products?filters[featured][$eq]=true&populate=*&pagination[limit]=4`),
-    fetch(`${import.meta.env.STRAPI_URL}/api/categories?populate=*&pagination[limit]=6`),
-    fetch(`${import.meta.env.STRAPI_URL}/api/articles?populate=*&pagination[limit]=3&sort=publishedAt:desc`),
+    fetch(
+      `${STRAPI_URL}/api/products?filters[featured][$eq]=true&pagination[limit]=4&sort=createdAt:desc&populate[images]=true&populate[category]=true`
+    ),
+    fetch(`${STRAPI_URL}/api/categories?pagination[limit]=6&sort=name:asc`),
+    fetch(`${STRAPI_URL}/api/products?pagination[limit]=4&sort=createdAt:desc&populate[images]=true&populate[category]=true`),
   ]);
+
   const productsData = await productsRes.json();
   const categoriesData = await categoriesRes.json();
   const articlesData = await articlesRes.json();
@@ -24,12 +26,9 @@ try {
   featuredProducts = productsData?.data ?? [];
   categories = categoriesData?.data ?? [];
   articles = articlesData?.data ?? [];
-} catch (e) {
-  // silencioso en build
-}
-
-
+} catch {}
 ---
+
 
 <BaseLayout
   title="ZetaGadget — Tu tienda tech de confianza"
@@ -146,7 +145,7 @@ try {
 
   <div class="w-full h-px" style="background: rgba(255,255,255,0.06);"></div>
 
-  <!-- ═══════════════════════════════════════
+    <!-- ═══════════════════════════════════════
        PRODUCTOS DESTACADOS
   ════════════════════════════════════════ -->
   <section class="py-14 sm:py-16">
@@ -171,6 +170,10 @@ try {
           {featuredProducts.map((item: any) => {
             const p = item.attributes ?? item;
             const cat = p.category?.data?.attributes ?? p.category ?? null;
+
+            const firstImgRel = p.images?.data?.[0]?.attributes?.url ?? null;
+            const firstImgAbs = firstImgRel ? new URL(firstImgRel, STRAPI_URL).toString() : null;
+
             return (
               <ProductCard
                 product={{
@@ -179,7 +182,7 @@ try {
                   slug: p.slug,
                   price: p.price,
                   shortDescription: p.shortDescription ?? p.short_description,
-                  imageUrl: p.image?.data?.attributes?.url ?? p.imageUrl ?? null,
+                  imageUrl: firstImgAbs,
                   featured: p.featured ?? false,
                   stock: p.stock ?? 0,
                   category: cat ? { name: cat.name, slug: cat.slug } : undefined,
@@ -191,7 +194,10 @@ try {
       ) : (
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {Array.from({ length: 4 }).map(() => (
-            <div class="rounded-2xl overflow-hidden animate-pulse" style="background: rgba(21,26,34,0.7); border: 1px solid rgba(255,255,255,0.05);">
+            <div
+              class="rounded-2xl overflow-hidden animate-pulse"
+              style="background: rgba(21,26,34,0.7); border: 1px solid rgba(255,255,255,0.05);"
+            >
               <div class="aspect-[4/3]" style="background: rgba(255,255,255,0.03);"></div>
               <div class="p-5 flex flex-col gap-3">
                 <div class="h-3 rounded-full w-1/3" style="background: rgba(255,255,255,0.06);"></div>
@@ -206,7 +212,6 @@ try {
       )}
     </div>
   </section>
-
   <div class="w-full h-px" style="background: rgba(255,255,255,0.06);"></div>
 
   <!-- ═══════════════════════════════════════

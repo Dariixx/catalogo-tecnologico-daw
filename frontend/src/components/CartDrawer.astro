@@ -92,131 +92,78 @@
 </aside>
 
 <script type="module">
-  import { getCart, removeFromCart, setQty, clearCart } from "../lib/cart.js";
-
-  const drawer   = document.getElementById("cartDrawer");
-  const backdrop = document.getElementById("cartBackdrop");
-  const closeBtn = document.getElementById("cartCloseBtn");
-
-  const root     = document.getElementById("cartRoot");
-  const totalEl  = document.getElementById("cartTotal");
-  const countEl  = document.getElementById("cartCountLabel");
-  const clearBtn = document.getElementById("cartClearBtn");
+  const drawer = document.querySelector("[data-cart-drawer]");
+  const overlay = document.querySelector("[data-cart-overlay]");
+  const closeBtn = document.querySelector("[data-cart-close]");
+  const itemsEl = document.querySelector("[data-cart-items]");
+  const emptyEl = document.querySelector("[data-cart-empty]");
+  const countEls = document.querySelectorAll("[data-cart-count]");
+  const totalEl = document.querySelector("[data-cart-total]");
 
   const money = (n) =>
     new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(Number(n || 0));
 
-  function openCart() {
-    drawer.classList.remove("translate-x-full");
-    backdrop.classList.remove("hidden");
-    document.documentElement.style.overflow = "hidden";
+  function open() {
+    drawer?.classList.remove("translate-x-full");
+    overlay?.classList.remove("hidden");
   }
 
-  function closeCart() {
-    drawer.classList.add("translate-x-full");
-    backdrop.classList.add("hidden");
-    document.documentElement.style.overflow = "";
+  function close() {
+    drawer?.classList.add("translate-x-full");
+    overlay?.classList.add("hidden");
   }
 
-  function render() {
-    const items = getCart();
-    const count = items.reduce((acc, it) => acc + (Number(it.qty) || 1), 0);
-    const total = items.reduce((acc, it) => acc + (Number(it.price) * (Number(it.qty) || 1)), 0);
+  function render(cart) {
+    const totalCount = cart.reduce((acc, it) => acc + (it.qty || 0), 0);
+    const totalPrice = cart.reduce((acc, it) => acc + (it.qty || 0) * (it.price || 0), 0);
 
-    // Badge del header si existe
-    const badge = document.getElementById("cartBadge");
-    if (badge) {
-      badge.textContent = String(count);
-      badge.classList.toggle("hidden", count <= 0);
-    }
+    countEls.forEach((el) => (el.textContent = String(totalCount)));
+    if (totalEl) totalEl.textContent = money(totalPrice);
 
-    countEl.textContent = `${count} artículo${count !== 1 ? "s" : ""}`;
-    totalEl.textContent = money(total);
+    if (!itemsEl || !emptyEl) return;
 
-    if (!items.length) {
-      root.innerHTML = `
-        <div class="rounded-2xl p-5"
-             style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
-          <p style="color: rgba(229,229,229,0.75); font-weight: 700;">Tu carrito está vacío</p>
-          <p class="mt-1 text-sm" style="color: rgba(229,229,229,0.45);">
-            Añade productos y aparecerán aquí.
-          </p>
-          <a href="/productos"
-             class="inline-flex mt-4 px-4 py-2 rounded-xl text-sm font-semibold"
-             style="background:#1e88e5;color:#fff;border:1px solid #1e88e5;">
-            Ver productos
-          </a>
-        </div>
-      `;
+    if (cart.length === 0) {
+      itemsEl.innerHTML = "";
+      emptyEl.classList.remove("hidden");
       return;
     }
 
-    root.innerHTML = `
-      <div class="grid gap-3">
-        ${items.map(it => `
-          <div class="rounded-2xl p-4"
-               style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="font-semibold truncate" style="color:#e5e5e5;">${it.name}</div>
-                <div class="text-sm" style="color: rgba(229,229,229,0.55);">${money(it.price)}</div>
-              </div>
+    emptyEl.classList.add("hidden");
 
-              <button data-remove="${it.id}"
-                      class="px-3 py-1 rounded-xl text-xs font-semibold"
-                      style="background: rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25);">
-                Quitar
-              </button>
+    itemsEl.innerHTML = cart
+      .map(
+        (it) => `
+        <div class="flex items-center justify-between gap-3 p-3 rounded-xl"
+          style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold" style="color:#e5e5e5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${it.name}
             </div>
-
-            <div class="mt-3 flex items-center justify-between">
-              <div class="text-xs" style="color: rgba(229,229,229,0.45);">Cantidad</div>
-              <input data-qty="${it.id}" type="number" min="1" value="${it.qty || 1}"
-                     class="w-24 rounded-xl px-3 py-2 text-sm outline-none"
-                     style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;" />
+            <div class="text-xs" style="color: rgba(229,229,229,0.55);">
+              ${it.qty} × ${money(it.price)}
             </div>
           </div>
-        `).join("")}
-      </div>
-    `;
-
-    root.querySelectorAll("[data-remove]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        removeFromCart(btn.dataset.remove);
-        render();
-      });
-    });
-
-    root.querySelectorAll("[data-qty]").forEach((inp) => {
-      inp.addEventListener("change", () => {
-        const id = inp.dataset.qty;
-        const qty = Math.max(1, Number(inp.value || 1));
-        setQty(id, qty);
-        render();
-      });
-    });
+          <div class="text-sm font-bold" style="color:#e5e5e5;">
+            ${money((it.qty || 0) * (it.price || 0))}
+          </div>
+        </div>
+      `
+      )
+      .join("");
   }
 
-  closeBtn.addEventListener("click", closeCart);
-  backdrop.addEventListener("click", closeCart);
-  clearBtn.addEventListener("click", () => {
-    clearCart();
-    render();
-  });
+  // Eventos globales
+  window.addEventListener("cart:open", open);
+  window.addEventListener("cart:close", close);
 
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeCart();
-  });
+  // Cerrar
+  closeBtn?.addEventListener("click", close);
+  overlay?.addEventListener("click", close);
 
-  // API global
-  window.openCart = () => {
-    render();
-    openCart();
-  };
+  // Re-render cuando cambie
+  window.addEventListener("cart:updated", (e) => render(e.detail?.cart ?? []));
 
-  // Re-render cuando cambia el carrito
-  window.addEventListener("cart:updated", render);
-
-  // Render inicial (para badge / total)
-  render();
+  // Render inicial
+  const api = window.ZG_CART;
+  render(api?.getCart ? api.getCart() : []);
 </script>

@@ -1,0 +1,56 @@
+[
+  {
+    "slug": "mejores-smartphones-calidad-precio-2026",
+    "title": "Mejores smartphones calidad/precio en 2026",
+    "description": "Selección actualizada con móviles recomendados por rango de precio.",
+    "authorSlug": "mario-ruiz",
+    "categorySlug": "smartphones",
+    "coverPath": "articles/mejores-smartphones-calidad-precio-2026.png",
+    "blocks": [
+      {
+        "__component": "shared.rich-text",
+        "body": "<h2>Qué hemos tenido en cuenta</h2><p>Valoramos rendimiento, cámara, autonomía y soporte de actualizaciones.</p><h2>Recomendaciones por presupuesto</h2><p>Desde gama media equilibrada hasta opciones premium para usuarios exigentes.</p>"
+      }
+    ],
+    "seo": {
+      "metaTitle": "Mejores smartphones calidad/precio 2026 | ZetaGadget",
+      "metaDescription": "Guía 2026 con móviles recomendados por rango de precio."
+    }
+  },
+  {
+    "slug": "como-elegir-portatil-estudios-trabajo",
+    "title": "Cómo elegir un portátil para estudios o trabajo",
+    "description": "Claves para acertar: pantalla, RAM, almacenamiento y autonomía.",
+    "authorSlug": "laura-gomez",
+    "categorySlug": "portatiles",
+    "coverPath": "articles/como-elegir-portatil-estudios-trabajo.png",
+    "blocks": [
+      {
+        "__component": "shared.rich-text",
+        "body": "<h2>Lo importante: uso real</h2><p>No es lo mismo ofimática que diseño, programación o gaming.</p><h2>Configuración mínima recomendada</h2><p>Para ir cómodo: 16GB RAM y SSD de 512GB si el presupuesto lo permite.</p>"
+      }
+    ],
+    "seo": {
+      "metaTitle": "Cómo elegir portátil para estudiar o trabajar | ZetaGadget",
+      "metaDescription": "Guía rápida para escoger portátil según tu uso y presupuesto."
+    }
+  },
+  {
+    "slug": "auriculares-anc-que-significa",
+    "title": "¿Qué es la cancelación activa de ruido (ANC)?",
+    "description": "Explicación simple de cómo funciona y cuándo merece la pena.",
+    "authorSlug": "pepe-sanchez",
+    "categorySlug": "audio",
+    "coverPath": "articles/auriculares-anc-que-significa.png",
+    "blocks": [
+      {
+        "__component": "shared.rich-text",
+        "body": "<h2>Qué hace el ANC</h2><p>Usa micrófonos para captar ruido y generar una onda inversa que lo reduce.</p><h2>Cuándo se nota más</h2><p>En ruidos constantes: avión, metro, ventiladores o oficinas.</p>"
+      }
+    ],
+    "seo": {
+      "metaTitle": "Qué es ANC y cómo funciona | ZetaGadget",
+      "metaDescription": "Qué significa ANC, cómo funciona y cuándo merece la pena."
+    }
+  }
+]

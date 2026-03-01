@@ -1,0 +1,202 @@
+[
+  {
+    "slug": "iphone-15-pro-128",
+    "name": "iPhone 15 Pro 128GB",
+    "shortDescription": "Titanio, A17 Pro y cámara Pro.",
+    "description": "El iPhone 15 Pro combina potencia, diseño premium y fotografía avanzada. Ideal para creadores y usuarios exigentes.\n\nIncluye pantalla OLED brillante, chip A17 Pro y un sistema de cámaras Pro pensado para vídeo y foto de alto nivel.",
+    "price": 1199,
+    "brand": "Apple",
+    "stock": 10,
+    "categorySlug": "smartphones",
+    "imagePaths": ["products/iphone-15-pro.png"],
+    "specifications": [
+      { "key": "Pantalla", "value": "6.1\" OLED" },
+      { "key": "Chip", "value": "A17 Pro" },
+      { "key": "Almacenamiento", "value": "128GB" }
+    ],
+    "seo": {
+      "metaTitle": "iPhone 15 Pro 128GB | ZetaGadget",
+      "metaDescription": "Compra iPhone 15 Pro 128GB: titanio, chip A17 Pro y cámaras Pro."
+    }
+  },
+  {
+    "slug": "samsung-galaxy-s24-256",
+    "name": "Samsung Galaxy S24 256GB",
+    "shortDescription": "Alta gama equilibrada con gran pantalla y cámara.",
+    "description": "Galaxy S24 ofrece una experiencia premium con una pantalla excelente y un rendimiento fluido.\n\nPensado para quienes buscan un Android potente, con buena autonomía y fotografía versátil.",
+    "price": 999,
+    "brand": "Samsung",
+    "stock": 15,
+    "categorySlug": "smartphones",
+    "imagePaths": ["products/samsung-galaxy-s24-256.png"],
+    "specifications": [
+      { "key": "Pantalla", "value": "6.2\" AMOLED" },
+      { "key": "Almacenamiento", "value": "256GB" },
+      { "key": "5G", "value": "Sí" }
+    ],
+    "seo": {
+      "metaTitle": "Samsung Galaxy S24 256GB | ZetaGadget",
+      "metaDescription": "Galaxy S24 256GB: pantalla AMOLED, rendimiento premium y 5G."
+    }
+  },
+  {
+    "slug": "google-pixel-8-128",
+    "name": "Google Pixel 8 128GB",
+    "shortDescription": "Android puro con gran cámara y IA.",
+    "description": "Pixel 8 destaca por su fotografía computacional y una experiencia Android limpia y rápida.\n\nPerfecto si priorizas cámara, actualizaciones y funciones inteligentes.",
+    "price": 699,
+    "brand": "Google",
+    "stock": 9,
+    "categorySlug": "smartphones",
+    "imagePaths": ["products/google-pixel-8-128.png"],
+    "specifications": [
+      { "key": "Pantalla", "value": "6.2\" OLED" },
+      { "key": "Almacenamiento", "value": "128GB" },
+      { "key": "Cámara", "value": "Fotografía computacional" }
+    ],
+    "seo": {
+      "metaTitle": "Google Pixel 8 128GB | ZetaGadget",
+      "metaDescription": "Pixel 8 128GB con Android puro, IA y cámara top."
+    }
+  },
+  {
+    "slug": "macbook-air-m3-16-512",
+    "name": "MacBook Air M3 16GB/512GB",
+    "shortDescription": "Ligero, silencioso y muy potente para el día a día.",
+    "description": "MacBook Air con chip M3 es ideal para productividad, estudio y trabajo creativo ligero.\n\nGran autonomía, rendimiento constante y un diseño ultraligero.",
+    "price": 1599,
+    "brand": "Apple",
+    "stock": 7,
+    "categorySlug": "portatiles",
+    "imagePaths": ["products/macbook-air-m3-16-512.png"],
+    "specifications": [
+      { "key": "Chip", "value": "Apple M3" },
+      { "key": "RAM", "value": "16GB" },
+      { "key": "SSD", "value": "512GB" }
+    ],
+    "seo": {
+      "metaTitle": "MacBook Air M3 16GB/512GB | ZetaGadget",
+      "metaDescription": "MacBook Air M3: ultraligero, gran autonomía y rendimiento."
+    }
+  },
+  {
+    "slug": "asus-rog-zephyrus-g14",
+    "name": "ASUS ROG Zephyrus G14",
+    "shortDescription": "Portátil gaming compacto con potencia real.",
+    "description": "Un portátil gaming equilibrado: tamaño contenido, gran rendimiento y buena pantalla.\n\nIdeal para jugar y crear contenido sin cargar con un equipo enorme.",
+    "price": 1899,
+    "brand": "ASUS",
+    "stock": 5,
+    "categorySlug": "portatiles",
+    "imagePaths": ["products/asus-rog-zephyrus-g1.png"],
+    "specifications": [
+      { "key": "Tipo", "value": "Gaming" },
+      { "key": "Pantalla", "value": "14\" alta tasa" },
+      { "key": "Formato", "value": "Compacto" }
+    ],
+    "seo": {
+      "metaTitle": "ASUS ROG Zephyrus G14 | ZetaGadget",
+      "metaDescription": "Zephyrus G14: portátil gaming compacto con gran rendimiento."
+    }
+  },
+  {
+    "slug": "sony-wh-1000xm5",
+    "name": "Sony WH-1000XM5",
+    "shortDescription": "Cancelación de ruido top y sonido premium.",
+    "description": "Auriculares over-ear con una de las mejores cancelaciones de ruido del mercado.\n\nPerfectos para viajar, trabajar y escuchar música con gran detalle.",
+    "price": 349,
+    "brand": "Sony",
+    "stock": 18,
+    "categorySlug": "audio",
+    "imagePaths": ["products/sony-wh-1000xm.png"],
+    "specifications": [
+      { "key": "Tipo", "value": "Over-ear" },
+      { "key": "ANC", "value": "Sí" },
+      { "key": "Conexión", "value": "Bluetooth" }
+    ],
+    "seo": {
+      "metaTitle": "Sony WH-1000XM5 | ZetaGadget",
+      "metaDescription": "Sony XM5: cancelación de ruido excelente y sonido premium."
+    }
+  },
+  {
+    "slug": "apple-airpods-pro-2",
+    "name": "AirPods Pro (2ª generación)",
+    "shortDescription": "ANC, gran comodidad y ecosistema Apple.",
+    "description": "Auriculares in-ear con cancelación de ruido y gran integración con dispositivos Apple.\n\nCómodos, con buen sonido y controles prácticos para el día a día.",
+    "price": 279,
+    "brand": "Apple",
+    "stock": 22,
+    "categorySlug": "audio",
+    "imagePaths": ["products/apple-airpods-pro-2.png"],
+    "specifications": [
+      { "key": "Tipo", "value": "In-ear" },
+      { "key": "ANC", "value": "Sí" },
+      { "key": "Estuche", "value": "Carga inalámbrica" }
+    ],
+    "seo": {
+      "metaTitle": "AirPods Pro 2 | ZetaGadget",
+      "metaDescription": "AirPods Pro 2 con ANC, comodidad y gran sonido."
+    }
+  },
+  {
+    "slug": "ps5-dualsense",
+    "name": "Mando DualSense PS5",
+    "shortDescription": "Haptics y gatillos adaptativos.",
+    "description": "El DualSense eleva la experiencia de juego con vibración háptica y gatillos adaptativos.\n\nIdeal como mando principal o extra para multijugador.",
+    "price": 69,
+    "brand": "Sony",
+    "stock": 30,
+    "categorySlug": "gaming",
+    "imagePaths": ["products/ps5-dualsense.png"],
+    "specifications": [
+      { "key": "Compatibilidad", "value": "PS5 / PC" },
+      { "key": "Gatillos", "value": "Adaptativos" },
+      { "key": "Vibración", "value": "Háptica" }
+    ],
+    "seo": {
+      "metaTitle": "Mando DualSense PS5 | ZetaGadget",
+      "metaDescription": "DualSense con vibración háptica y gatillos adaptativos."
+    }
+  },
+  {
+    "slug": "logitech-g-pro-x-superlight",
+    "name": "Logitech G Pro X Superlight",
+    "shortDescription": "Ratón ultraligero para competitivo.",
+    "description": "Ratón inalámbrico ultraligero diseñado para máximo rendimiento en esports.\n\nPreciso, cómodo y con gran autonomía.",
+    "price": 129,
+    "brand": "Logitech",
+    "stock": 14,
+    "categorySlug": "gaming",
+    "imagePaths": ["products/logitech-g-pro-x-superlight.png"],
+    "specifications": [
+      { "key": "Tipo", "value": "Inalámbrico" },
+      { "key": "Peso", "value": "Ultraligero" },
+      { "key": "Uso", "value": "Competitivo" }
+    ],
+    "seo": {
+      "metaTitle": "Logitech G Pro X Superlight | ZetaGadget",
+      "metaDescription": "Ratón ultraligero pro para competitivo: precisión y autonomía."
+    }
+  },
+  {
+    "slug": "anker-gan-65w-usb-c",
+    "name": "Cargador Anker GaN 65W USB-C",
+    "shortDescription": "Carga rápida compacta para móvil y portátil.",
+    "description": "Cargador GaN compacto con potencia suficiente para móviles, tablets y muchos portátiles.\n\nIdeal para llevar en la mochila y cargar varios dispositivos.",
+    "price": 49,
+    "brand": "Anker",
+    "stock": 40,
+    "categorySlug": "accesorios",
+    "imagePaths": ["products/anker-gan-65w-usb-c.png"],
+    "specifications": [
+      { "key": "Potencia", "value": "65W" },
+      { "key": "Tecnología", "value": "GaN" },
+      { "key": "Puerto", "value": "USB-C" }
+    ],
+    "seo": {
+      "metaTitle": "Cargador Anker GaN 65W USB-C | ZetaGadget",
+      "metaDescription": "Cargador GaN 65W compacto con carga rápida USB-C."
+    }
+  }
+]

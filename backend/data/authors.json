@@ -1,0 +1,20 @@
+[
+    {
+      "slug": "mario-ruiz",
+      "name": "Mario Ruiz",
+      "email": "mario@zetagadget.es",
+      "avatarPath": "authors/mario-ruiz.png"
+    },
+    {
+      "slug": "laura-gomez",
+      "name": "Laura Gómez",
+      "email": "laura@zetagadget.es",
+      "avatarPath": "authors/laura-gomez.png"
+    },
+    {
+      "slug": "Pepe-sanchez",
+      "name": "Pepe Sánchez",
+      "email": "pepe@zetagadget.es",
+      "avatarPath": "authors/pepe-sanchez.png"
+    }
+  ]

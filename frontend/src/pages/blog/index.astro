@@ -15,7 +15,6 @@ const params = new URL(Astro.url).searchParams;
 const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
 const pageSize = 9;
 
-// 🔎 búsqueda
 const q = (params.get("q") ?? "").trim();
 const hasQuery = !!q;
 
@@ -24,18 +23,48 @@ let pageCount = 1;
 let total = 0;
 let featured = null;
 
-try {
-  // Populate más controlado (rápido + estable)
-  const populate = "populate=author.avatar,cover,tags";
+const toAbs = (maybeUrl) => {
+  if (!maybeUrl) return null;
+  if (/^https?:\/\//i.test(maybeUrl)) return maybeUrl;
+  try {
+    return new URL(maybeUrl, STRAPI_URL).toString();
+  } catch {
+    return null;
+  }
+};
 
-  // Query main
+const pickMediaUrl = (media) => {
+  // Soporta:
+  // - v4: media.data.attributes
+  // - "plano": media.url, media.formats
+  const m =
+    media?.data?.attributes ??
+    media?.data ??
+    media?.attributes ??
+    media ??
+    null;
+
+  const rel =
+    m?.url ??
+    m?.formats?.large?.url ??
+    m?.formats?.medium?.url ??
+    m?.formats?.small?.url ??
+    m?.formats?.thumbnail?.url ??
+    null;
+
+  return toAbs(rel);
+};
+
+try {
+  const populate =
+    "populate[cover]=true&populate[author][populate]=avatar&populate[category]=true";
+
   const qs = new URLSearchParams({
     "pagination[page]": String(page),
     "pagination[pageSize]": String(pageSize),
     sort: "publishedAt:desc",
   });
 
-  // ✅ filtro por título (si quieres también por descripción, habría que usar $or)
   if (q) qs.set("filters[title][$containsi]", q);
 
   const [mainRes, featuredRes] = await Promise.all([
@@ -57,8 +86,7 @@ try {
     const raw = featuredData?.data?.[0];
     if (raw) featured = raw.attributes ?? raw;
   }
-} catch (e) {
-  // silencioso
+} catch {
   articles = [];
   pageCount = 1;
   total = 0;
@@ -70,16 +98,17 @@ const formatDate = (iso) =>
     new Date(iso)
   );
 
-// ✅ Evita duplicado del destacado (solo en página 1 y sin búsqueda)
+// Evita duplicar el destacado
 const featuredSlug = featured?.slug ?? null;
 const gridArticles =
   page === 1 && featuredSlug && !hasQuery
     ? articles.filter((it) => (it.attributes?.slug ?? it.slug) !== featuredSlug)
     : articles;
 
-// URLs útiles
+// URLs para paginación y limpiar
 const baseUrl = "/blog";
 const clearUrl = "/blog";
+
 const buildUrl = (nextPage) => {
   const u = new URL(baseUrl, "https://dummy.local");
   if (q) u.searchParams.set("q", q);
@@ -229,127 +258,148 @@ const buildUrl = (nextPage) => {
     )}
 
     <!-- Artículo destacado (solo página 1 y sin búsqueda) -->
-    {page === 1 && featured && !hasQuery && (
-      <a
-        href={`/blog/${featured.slug}`}
-        class="group block rounded-3xl overflow-hidden mb-12 transition-all duration-300"
-        style="background: #151a22; border: 1px solid rgba(255,255,255,0.08);"
-        onmouseover="this.style.border='1px solid rgba(58,160,255,0.28)'; this.style.boxShadow='0 14px 48px rgba(30,136,229,0.10)';"
-        onmouseout="this.style.border='1px solid rgba(255,255,255,0.08)'; this.style.boxShadow='none';"
-      >
-        <div class="grid grid-cols-1 lg:grid-cols-2">
-          <!-- Cover -->
-          <div class="relative overflow-hidden" style="min-height: 260px;">
-            {(featured.cover?.data?.attributes?.url ?? featured.coverUrl) ? (
-              <img
-                src={featured.cover?.data?.attributes?.url ?? featured.coverUrl}
-                alt={featured.title}
-                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                style="min-height: 260px;"
-                loading="eager"
-                decoding="async"
-              />
-            ) : (
-              <div
-                class="w-full h-full flex items-center justify-center"
-                style="background: rgba(255,255,255,0.03); min-height: 260px;"
-              >
-                <svg width="52" height="52" viewBox="0 0 52 52" fill="none" aria-hidden="true">
-                  <rect width="52" height="52" rx="12" fill="rgba(30,136,229,0.07)"/>
-                  <path d="M13 36L21 26l6 7 5-5 7 8H13z" fill="none" stroke="rgba(229,229,229,0.15)" stroke-width="1.5" stroke-linejoin="round"/>
-                  <circle cx="21" cy="22" r="4" fill="none" stroke="rgba(229,229,229,0.15)" stroke-width="1.5"/>
-                </svg>
-              </div>
-            )}
+    {page === 1 && featured && !hasQuery && (() => {
+      const coverAbs = pickMediaUrl(featured.cover);
+      const author =
+        featured.author?.data?.attributes ??
+        featured.author?.data ??
+        featured.author ??
+        null;
 
-            <!-- Badge destacado -->
-            <div class="absolute top-4 left-4">
-              <span
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style="background: rgba(30,136,229,0.88); color: #fff; backdrop-filter: blur(8px);"
-              >
-                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-                Destacado
+      const authorAvatarAbs = pickMediaUrl(author?.avatar);
+
+      return (
+        <a
+          href={`/blog/${featured.slug}`}
+          class="group block rounded-3xl overflow-hidden mb-12 transition-all duration-300"
+          style="background: #151a22; border: 1px solid rgba(255,255,255,0.08);"
+          onmouseover="this.style.border='1px solid rgba(58,160,255,0.28)'; this.style.boxShadow='0 14px 48px rgba(30,136,229,0.10)';"
+          onmouseout="this.style.border='1px solid rgba(255,255,255,0.08)'; this.style.boxShadow='none';"
+        >
+          <div class="grid grid-cols-1 lg:grid-cols-2">
+            <div class="relative overflow-hidden" style="min-height: 260px;">
+              {coverAbs ? (
+                <img
+                  src={coverAbs}
+                  alt={featured.title}
+                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  style="min-height: 260px;"
+                  loading="eager"
+                  decoding="async"
+                />
+              ) : (
+                <div
+                  class="w-full h-full flex items-center justify-center"
+                  style="background: rgba(255,255,255,0.03); min-height: 260px;"
+                >
+                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none" aria-hidden="true">
+                    <rect width="52" height="52" rx="12" fill="rgba(30,136,229,0.07)"/>
+                    <path d="M13 36L21 26l6 7 5-5 7 8H13z" fill="none" stroke="rgba(229,229,229,0.15)" stroke-width="1.5" stroke-linejoin="round"/>
+                    <circle cx="21" cy="22" r="4" fill="none" stroke="rgba(229,229,229,0.15)" stroke-width="1.5"/>
+                  </svg>
+                </div>
+              )}
+
+              <div class="absolute top-4 left-4">
+                <span
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                  style="background: rgba(30,136,229,0.88); color: #fff; backdrop-filter: blur(8px);"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                  Destacado
+                </span>
+              </div>
+            </div>
+
+            <div class="flex flex-col justify-center gap-4 p-7 sm:p-8 lg:p-10">
+              <p class="text-xs font-semibold uppercase tracking-widest" style="color: #1e88e5;">
+                Artículo destacado
+              </p>
+
+              <h2 class="text-xl sm:text-2xl font-extrabold leading-snug" style="color:#e5e5e5;">
+                {featured.title}
+              </h2>
+
+              {featured.description && (
+                <p class="text-sm leading-relaxed line-clamp-3" style="color: rgba(229,229,229,0.58);">
+                  {featured.description}
+                </p>
+              )}
+
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                {(author?.name ?? featured.authorName) && (
+                  <span class="flex items-center gap-2 text-xs" style="color: rgba(229,229,229,0.45);">
+                    {authorAvatarAbs ? (
+                      <img
+                        src={authorAvatarAbs}
+                        alt={author?.name ?? featured.authorName}
+                        class="w-6 h-6 rounded-full object-cover"
+                        style="border: 1px solid rgba(255,255,255,0.10);"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : null}
+                    {author?.name ?? featured.authorName}
+                  </span>
+                )}
+
+                {featured.publishedAt && (
+                  <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                      <rect x="1.5" y="2.5" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                      <path d="M4.5 1.5v2M8.5 1.5v2M1.5 5.5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    {formatDate(featured.publishedAt)}
+                  </span>
+                )}
+
+                {(() => {
+                  const rt = getReadingTimeMinutes({ content: featured.content, blocks: featured.blocks });
+                  return rt ? (
+                    <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                        <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/>
+                        <path d="M6.5 3.5v3l2 1.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                      </svg>
+                      {rt} min lectura
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+
+              <span class="mt-2 inline-flex items-center gap-2 text-sm font-semibold w-fit" style="color:#3aa0ff;">
+                Leer artículo
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:translate-x-0.5">
+                  <path d="M3 7h8M7.5 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </span>
             </div>
           </div>
+        </a>
+      );
+    })()}
 
-          <!-- Info -->
-          <div class="flex flex-col justify-center gap-4 p-7 sm:p-8 lg:p-10">
-            <p class="text-xs font-semibold uppercase tracking-widest" style="color: #1e88e5;">
-              Artículo destacado
-            </p>
-
-            <h2 class="text-xl sm:text-2xl font-extrabold leading-snug" style="color:#e5e5e5;">
-              {featured.title}
-            </h2>
-
-            {featured.description && (
-              <p class="text-sm leading-relaxed line-clamp-3" style="color: rgba(229,229,229,0.58);">
-                {featured.description}
-              </p>
-            )}
-
-            <!-- Meta -->
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-              {(featured.author?.data?.attributes?.name ?? featured.authorName) && (
-                <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.45);">
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                    <circle cx="6.5" cy="4.5" r="2.5" stroke="currentColor" stroke-width="1.2"/>
-                    <path d="M2 11c0-2.485 2.015-4 4.5-4s4.5 1.515 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                  </svg>
-                  {featured.author?.data?.attributes?.name ?? featured.authorName}
-                </span>
-              )}
-
-              {featured.publishedAt && (
-                <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                    <rect x="1.5" y="2.5" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
-                    <path d="M4.5 1.5v2M8.5 1.5v2M1.5 5.5h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                  </svg>
-                  {formatDate(featured.publishedAt)}
-                </span>
-              )}
-
-              {(() => {
-                const rt = getReadingTimeMinutes({ content: featured.content, blocks: featured.blocks });
-                return rt ? (
-                  <span class="flex items-center gap-1.5 text-xs" style="color: rgba(229,229,229,0.4);">
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                      <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.2"/>
-                      <path d="M6.5 3.5v3l2 1.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-                    </svg>
-                    {rt} min lectura
-                  </span>
-                ) : null;
-              })()}
-            </div>
-
-            <span class="mt-2 inline-flex items-center gap-2 text-sm font-semibold w-fit" style="color:#3aa0ff;">
-              Leer artículo
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" class="transition-transform duration-200 group-hover:translate-x-0.5">
-                <path d="M3 7h8M7.5 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </div>
-        </div>
-      </a>
-    )}
-
-    <!-- Grid artículos -->
+    <!-- GRID -->
     {gridArticles.length > 0 ? (
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {gridArticles.map((item) => {
-          const a = item.attributes ?? item;
-          const author = a.author?.data?.attributes ?? a.author ?? null;
+        {gridArticles.map((item: any) => {
+          const a = item?.attributes ?? item;
+
+          const author =
+            a.author?.data?.attributes ??
+            a.author?.data ??
+            a.author ??
+            null;
+
+          const coverAbs = pickMediaUrl(a.cover);
+
           return (
             <ArticleCard
               article={{
                 title: a.title,
                 slug: a.slug,
                 description: a.description ?? a.excerpt,
-                coverUrl: a.cover?.data?.attributes?.url ?? a.coverUrl ?? null,
+                coverUrl: coverAbs,
                 authorName: author?.name ?? a.authorName ?? null,
                 publishedAt: a.publishedAt,
                 readingTime: getReadingTimeMinutes({ content: a.content, blocks: a.blocks }),
@@ -359,7 +409,6 @@ const buildUrl = (nextPage) => {
         })}
       </div>
     ) : (
-      <!-- Empty state -->
       <div
         class="relative flex flex-col items-center text-center py-24 px-6 rounded-3xl overflow-hidden"
         style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
@@ -416,10 +465,12 @@ const buildUrl = (nextPage) => {
       </div>
     )}
 
-    <!-- Paginación -->
     {pageCount > 1 && (
       <div class="mt-12 flex justify-center">
-        <Pagination pagination={{ page, pageCount }} />
+        <Pagination
+          pagination={{ page, pageCount }}
+          buildUrl={buildUrl}
+        />
       </div>
     )}
   </main>

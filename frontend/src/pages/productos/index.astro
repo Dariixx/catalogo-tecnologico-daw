@@ -6,8 +6,8 @@ import Pagination from "../../components/Pagination.astro";
 import ProductsToolbar from "../../components/ProductsToolbar.jsx";
 
 const STRAPI_URL =
-  import.meta.env.STRAPI_URL ||
-  process.env.STRAPI_URL ||
+  import.meta.env.PUBLIC_STRAPI_URL ||
+  process.env.PUBLIC_STRAPI_URL ||
   "https://api.zetagadget.es";
 
 const { url } = Astro;
@@ -39,12 +39,12 @@ let total = 0;
 
 try {
   const [sortField, sortDir] = sort.split(":");
-  const qs = new URLSearchParams({
-    "pagination[page]": String(page),
-    "pagination[pageSize]": String(pageSize),
-    populate: "*",
-    sort: `${sortField}:${sortDir ?? "asc"}`,
-  });
+ const qs = new URLSearchParams({
+  "pagination[page]": String(page),
+  "pagination[pageSize]": String(pageSize),
+  populate: "*",
+  sort: `${sortField}:${sortDir ?? "asc"}`,
+});
 
   // 🔎 filtro Strapi para rendimiento
   if (q) qs.set("filters[name][$containsi]", q);
@@ -202,30 +202,38 @@ const shownCount = productsRegexFiltered.length;
     )}
 
     <!-- Grid productos -->
-    {productsRegexFiltered.length > 0 ? (
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {productsRegexFiltered.map((item) => {
-          const p = item.attributes ?? item;
-          const catObj = p.category?.data?.attributes ?? p.category ?? null;
+{productsRegexFiltered.length > 0 ? (
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    {productsRegexFiltered.map((item) => {
+      const p = item.attributes ?? item;
+      const catObj = p.category?.data?.attributes ?? p.category ?? null;
 
-          return (
-            <ProductCard
-              product={{
-                id: item.id ?? p.slug,
-                name: p.name,
-                slug: p.slug,
-                price: p.price,
-                shortDescription: p.shortDescription ?? p.short_description,
-                imageUrl: p.image?.data?.attributes?.url ?? p.imageUrl ?? null,
-                featured: p.featured ?? false,
-                stock: p.stock ?? 0,
-                category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
-              }}
-            />
-          );
-        })}
-      </div>
-    ) : (
+      // ✅ Tu modelo es "images" (multiple). Cogemos la primera.
+      const firstImg = p.images?.data?.[0]?.attributes?.url ?? null;
+
+      // ✅ Strapi devuelve /uploads/... => lo convertimos a URL completa
+      const imageUrl = firstImg
+        ? (firstImg.startsWith("http") ? firstImg : `${STRAPI_URL}${firstImg}`)
+        : null;
+
+      return (
+        <ProductCard
+          product={{
+            id: item.id ?? p.slug,
+            name: p.name,
+            slug: p.slug,
+            price: p.price,
+            shortDescription: p.shortDescription ?? p.short_description,
+            imageUrl,
+            featured: p.featured ?? false,
+            stock: p.stock ?? 0,
+            category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
+          }}
+        />
+      );
+    })}
+  </div>
+) : (
       <!-- Empty state -->
       <div
         class="relative flex flex-col items-center text-center py-20 px-6 rounded-3xl overflow-hidden"

@@ -1,0 +1,27 @@
+[
+    {
+      "slug": "smartphones",
+      "name": "Smartphones",
+      "description": "Móviles Android y iPhone, comparativas y novedades."
+    },
+    {
+      "slug": "portatiles",
+      "name": "Portátiles",
+      "description": "Ultrabooks, productividad y portátiles gaming."
+    },
+    {
+      "slug": "audio",
+      "name": "Audio",
+      "description": "Auriculares, altavoces y accesorios de sonido."
+    },
+    {
+      "slug": "gaming",
+      "name": "Gaming",
+      "description": "Consolas, periféricos y accesorios para jugar."
+    },
+    {
+      "slug": "accesorios",
+      "name": "Accesorios",
+      "description": "Cables, hubs, cargadores y accesorios esenciales."
+    }
+  ]
