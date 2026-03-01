@@ -1,80 +1,53 @@
 ---
-// src/pages/categorias/[slug].astro
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import Pagination from "../../components/Pagination.astro";
 
-// Para el render (fuera de getStaticPaths)
-const STRAPI_URL =
-  import.meta.env.STRAPI_URL ||
-  process.env.STRAPI_URL ||
-  "https://api.zetagadget.es";
+import { strapiFetch, unwrapCollection } from "../../lib/strapi.js";
+import { mapProductCard } from "../../lib/mappers.js";
 
 export async function getStaticPaths() {
-  // ✅ IMPORTANTE: define aquí también para build-time
-  const STRAPI_URL_INNER =
-    import.meta.env.STRAPI_URL ||
-    process.env.STRAPI_URL ||
-    "https://api.zetagadget.es";
-
+  // Usa strapiFetch (no fetch manual) para no depender de STRAPI_URL aquí
   try {
-    const res = await fetch(
-      `${STRAPI_URL_INNER}/api/categories?pagination[limit]=1000&fields=slug`
-    );
-    const data = await res.json();
+    const json = await strapiFetch("/categories?pagination[pageSize]=1000&fields[0]=slug");
+    const cats = unwrapCollection(json);
 
-    return (data?.data ?? [])
-      .map((c: any) => ({
-        params: { slug: c.attributes?.slug ?? c.slug },
-      }))
-      .filter((x: any) => !!x?.params?.slug);
-  } catch {
+    return cats
+      .map((c) => ({ params: { slug: c.slug } }))
+      .filter((x) => !!x?.params?.slug);
+  } catch (e) {
     return [];
   }
 }
 
 const { slug } = Astro.params;
 
-// ✅ Paginación real por query
+// paginación por query (?page=2)
 const params = new URL(Astro.url).searchParams;
 const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
 const pageSize = 12;
 
-let category: any = null;
-let products: any[] = [];
-let pageCount = 1;
-let total = 0;
-
-try {
-  const safeSlug = encodeURIComponent(slug ?? "");
-
-  const [catRes, productsRes] = await Promise.all([
-    fetch(`${STRAPI_URL}/api/categories?filters[slug][$eq]=${safeSlug}&fields[0]=name&fields[1]=slug`),
-    fetch(
-      `${STRAPI_URL}/api/products?filters[category][slug][$eq]=${safeSlug}` +
-`&fields[0]=name&fields[1]=slug&fields[2]=price&fields[3]=shortDescription&fields[4]=featured&fields[5]=stock` +
-`&populate[image]=true&populate[category]=true` +
-`&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort=createdAt:desc`
-    ),
-  ]);
-
-  const catData = await catRes.json();
-  const productsData = await productsRes.json();
-
-  const raw = catData?.data?.[0];
-  if (raw) category = raw.attributes ?? raw;
-
-  products = productsData?.data ?? [];
-  pageCount = productsData?.meta?.pagination?.pageCount ?? 1;
-  total = productsData?.meta?.pagination?.total ?? 0;
-} catch (e) {
-  category = null;
-  products = [];
-  pageCount = 1;
-  total = 0;
-}
+const catJson = await strapiFetch(
+  `/categories?filters[slug][$eq]=${encodeURIComponent(slug)}&fields[0]=name&fields[1]=slug&fields[2]=description`
+);
+const category = unwrapCollection(catJson)[0] ?? null;
 
 if (!category) return Astro.redirect("/categorias");
+
+const prodJson = await strapiFetch(
+  `/products` +
+    `?filters[category][slug][$eq]=${encodeURIComponent(slug)}` +
+    `&fields[0]=name&fields[1]=slug&fields[2]=price&fields[3]=shortDescription&fields[4]=stock` +
+    `&populate[0]=images&populate[1]=category` +
+    `&pagination[page]=${page}&pagination[pageSize]=${pageSize}` +
+    `&sort=createdAt:desc`
+);
+
+const rawProducts = unwrapCollection(prodJson);
+const products = rawProducts.map(mapProductCard);
+
+const pageCount = prodJson?.meta?.pagination?.pageCount ?? 1;
+const total = prodJson?.meta?.pagination?.total ?? products.length ?? 0;
 ---
 
 <BaseLayout
@@ -82,7 +55,6 @@ if (!category) return Astro.redirect("/categorias");
   description={category.description ?? `Explora productos de ${category.name} en ZetaGadget.`}
 >
   <main class="container-page py-10">
-
     <!-- Breadcrumb -->
     <nav class="mb-8">
       <ol
@@ -174,26 +146,7 @@ if (!category) return Astro.redirect("/categorias");
 
       {products.length > 0 ? (
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {products.map((item: any) => {
-            const p = item.attributes ?? item;
-            const c = p.category?.data?.attributes ?? p.category ?? null;
-
-            return (
-              <ProductCard
-                product={{
-                  id: item.id ?? p.slug,
-                  name: p.name,
-                  slug: p.slug,
-                  price: p.price,
-                  shortDescription: p.shortDescription ?? p.short_description,
-                  imageUrl: p.image?.data?.attributes?.url ?? p.imageUrl ?? null,
-                  featured: p.featured ?? false,
-                  stock: p.stock ?? 0,
-                  category: c ? { name: c.name, slug: c.slug } : undefined,
-                }}
-              />
-            );
-          })}
+          {products.map((p) => <ProductCard product={p} />)}
         </div>
       ) : (
         <div

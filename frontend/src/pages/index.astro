@@ -39,119 +39,285 @@ try {
   title="ZetaGadget — Tecnología con criterio"
   description="Selección de gadgets, comparativas y artículos para comprar con cabeza."
 >
-  <main class="container-page py-10 space-y-12">
 
-    <!-- HERO simple -->
-    <section class="rounded-3xl p-8" style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
-      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">ZetaGadget</p>
-      <h1 class="mt-2 text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">
-        Tecnología con criterio, sin humo.
-      </h1>
-      <p class="mt-3 max-w-2xl" style="color: rgba(229,229,229,0.55);">
-        Catálogo curado + blog útil para elegir mejor. Productos reales, fichas claras y comparativas.
-      </p>
+<style>
+  
 
-      <div class="mt-6 flex flex-wrap gap-3">
-        <a href="/productos/" class="px-5 py-3 rounded-xl text-sm font-semibold"
-          style="background:#1e88e5;color:#fff;border:1px solid #1e88e5;">
-          Ver catálogo
-        </a>
-        <a href="/blog/" class="px-5 py-3 rounded-xl text-sm font-semibold"
-          style="background: rgba(255,255,255,0.06); color: rgba(229,229,229,0.85); border:1px solid rgba(255,255,255,0.10);">
-          Leer blog
-        </a>
-      </div>
-    </section>
+  .badge-dot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+    background: rgb(var(--brand-2));
+    box-shadow: 0 0 6px rgb(var(--brand-2));
+    animation: blink 2.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.15} }
 
-    <!-- CATEGORÍAS (3) -->
-    <section>
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Explorar</p>
-          <h2 class="text-xl font-bold" style="color:#e5e5e5;">Categorías destacadas</h2>
+  .prod-img img { transition: transform .4s ease; }
+  .prod-card:hover .prod-img img { transform: scale(1.05); }
+
+  .art-card { position: relative; overflow: hidden; }
+  .art-card::before {
+    content: '';
+    position: absolute; top: -1px; left: -1px; right: -1px; height: 2px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: linear-gradient(90deg, rgb(var(--brand)) 0%, rgb(var(--brand-2)) 100%);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .35s ease;
+  }
+  .art-card:hover::before { transform: scaleX(1); }
+</style>
+
+  <div class="container-page">
+
+    <!-- ══════════════════════════════════════
+         HERO
+    ══════════════════════════════════════ -->
+    <section class="panel mt-8 overflow-hidden">
+
+      <div class="px-10 pt-14 pb-12 sm:px-16 sm:pt-16 sm:pb-14">
+
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 mb-8 rounded-full px-3.5 py-1.5 font-body text-[.7rem] font-medium tracking-widest uppercase"
+          style="border: 1px solid rgba(var(--brand),.22);
+                 background: rgba(var(--brand),.06);
+                 color: rgb(var(--brand-2));">
+          <span class="badge-dot"></span>
+          ZetaGadget
         </div>
-        <a href="/categorias/" class="text-sm" style="color: rgba(229,229,229,0.55);">Ver todas</a>
+
+        <!-- Heading + sub en dos columnas en desktop -->
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+
+          <h1 class="font-display font-extrabold leading-[1.06] tracking-[-0.03em]"
+            style="font-size: clamp(2.6rem, 5vw, 4rem); color: rgb(var(--text));">
+            Tecnología con criterio.<br>
+            <span style="color: rgb(var(--brand-2));">Sin humo.</span>
+          </h1>
+
+          <div class="mt-5 lg:mt-0 lg:max-w-xs shrink-0">
+            <p class="font-body text-sm font-light leading-relaxed"
+              style="color: rgba(var(--muted),.50);">
+              Catálogo curado, fichas claras y comparativas reales
+              para que compres mejor — sin ruido, sin relleno.
+            </p>
+
+            <div class="mt-5 flex flex-wrap gap-2.5">
+              <a href="/productos/"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-body text-sm font-semibold
+                       transition-all duration-200 hover:-translate-y-px"
+                style="background: rgb(var(--brand)); color: rgb(var(--bg));"
+                onmouseover="this.style.filter='brightness(1.1)'; this.style.boxShadow='0 6px 24px rgba(var(--brand),.35)'"
+                onmouseout="this.style.filter=''; this.style.boxShadow=''">
+                Ver catálogo
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+              <a href="/blog/"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-body text-sm
+                       transition-all duration-200 hover:-translate-y-px"
+                style="background: rgba(var(--border),.04);
+                       color: rgba(var(--text),.55);
+                       border: 1px solid rgba(var(--border),.10);"
+                onmouseover="this.style.borderColor='rgba(var(--border),.18)'; this.style.color='rgb(var(--text))'"
+                onmouseout="this.style.borderColor='rgba(var(--border),.10)'; this.style.color='rgba(var(--text),.55)'">
+                Leer blog
+              </a>
+            </div>
+          </div>
+
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        {cats.map((c) => (
-          <a href={`/categorias/${c.slug}/`} class="rounded-3xl p-6 block"
-            style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
-            <div class="text-sm font-semibold" style="color:#e5e5e5;">{c.name}</div>
-            {c.description && <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">{c.description}</p>}
-          </a>
+      <!-- Stats strip -->
+      <div class="grid grid-cols-3 font-body"
+        style="border-top: 1px solid rgba(var(--border),.08);">
+        {[
+          { num: "+300", label: "Productos analizados" },
+          { num: "100%", label: "Sin patrocinadores"   },
+          { num: "0 €",  label: "Coste de consulta"    },
+        ].map((s, i) => (
+          <div class="px-10 py-5 flex flex-col gap-1 sm:px-16"
+            style={i > 0 ? 'border-left: 1px solid rgba(var(--border),.08);' : ''}>
+            <span class="font-display font-extrabold tracking-tight"
+              style="font-size: 1.4rem; color: rgb(var(--text));">{s.num}</span>
+            <span class="text-xs" style="color: rgba(var(--muted),.35);">{s.label}</span>
+          </div>
         ))}
       </div>
+
     </section>
 
-    <!-- PRODUCTOS (3) -->
-    <section>
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Selección</p>
-          <h2 class="text-xl font-bold" style="color:#e5e5e5;">Productos recientes</h2>
+
+    <!-- ══════════════════════════════════════
+         MAIN CONTENT
+    ══════════════════════════════════════ -->
+    <main class="py-12 space-y-16">
+
+      <!-- CATEGORÍAS -->
+      <section>
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5"
+              style="color: rgb(var(--brand));">Explorar</p>
+            <h2 class="font-display text-xl font-bold tracking-tight"
+              style="color: rgb(var(--text));">Categorías destacadas</h2>
+          </div>
+          <a href="/categorias/"
+            class="font-body text-sm transition-colors duration-150"
+            style="color: rgba(var(--muted),.38);"
+            onmouseover="this.style.color='rgb(var(--brand-2))'"
+            onmouseout="this.style.color='rgba(var(--muted),.38)'">
+            Ver todas →
+          </a>
         </div>
-        <a href="/productos/" class="text-sm" style="color: rgba(229,229,229,0.55);">Ver todos</a>
-      </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        {prods.map((p) => {
-          const img =
-            p.images?.[0]?.formats?.small?.url ??
-            p.images?.[0]?.formats?.thumbnail?.url ??
-            p.images?.[0]?.url ??
-            null;
-          const imgAbs = img ? abs(img) : null;
-
-          return (
-            <a href={`/productos/${p.slug}/`} class="rounded-3xl overflow-hidden block"
-              style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
-              <div class="aspect-[4/3]" style="background: rgba(255,255,255,0.03);">
-                {imgAbs ? (
-                  <img src={imgAbs} alt={p.name} class="w-full h-full object-cover" loading="lazy" decoding="async" />
-                ) : (
-                  <div class="w-full h-full flex items-center justify-center text-sm" style="color: rgba(229,229,229,0.45);">Sin imagen</div>
-                )}
+        <div class="grid grid-cols-1 sm:grid-cols-3 rounded-2xl overflow-hidden"
+          style="border: 1px solid rgba(var(--border),.08);">
+          {cats.length > 0 ? cats.map((c, i) => (
+            <a href={`/categorias/${c.slug}/`}
+              class="relative block px-7 py-7 transition-colors duration-150"
+              style={`background: rgb(var(--panel)); ${i > 0 ? 'border-left: 1px solid rgba(var(--border),.08);' : ''}`}
+              onmouseover="this.style.background='rgb(var(--panel-2))'"
+              onmouseout="this.style.background='rgb(var(--panel))'">
+              <div class="mb-4 w-8 h-8 rounded-xl flex items-center justify-center text-sm"
+                style="background: rgba(var(--brand),.09);
+                       border: 1px solid rgba(var(--brand),.18);
+                       color: rgb(var(--brand-2));">
+                {["◈","◉","◎"][i]}
               </div>
-              <div class="p-5">
-                <div class="font-semibold" style="color:#e5e5e5;">{p.name}</div>
-                {p.shortDescription && <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">{p.shortDescription}</p>}
-                {typeof p.price === "number" && (
-                  <div class="mt-3 font-extrabold" style="color:#e5e5e5;">
-                    {new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(p.price)}
-                  </div>
-                )}
-              </div>
+              <div class="font-display font-semibold text-sm"
+                style="color: rgb(var(--text));">{c.name}</div>
+              {c.description && (
+                <p class="font-body mt-2 text-xs leading-relaxed"
+                  style="color: rgba(var(--muted),.48);">{c.description}</p>
+              )}
+              <span class="absolute bottom-5 right-5 text-sm"
+                style="color: rgba(var(--muted),.20);">↗</span>
             </a>
-          );
-        })}
-      </div>
-    </section>
-
-    <!-- BLOG (3) -->
-    <section>
-      <div class="flex items-end justify-between mb-5">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Autoridad</p>
-          <h2 class="text-xl font-bold" style="color:#e5e5e5;">Artículos clave</h2>
+          )) : (
+            <p class="font-body px-7 py-7 text-sm col-span-3"
+              style="color: rgba(var(--muted),.30);">Sin categorías disponibles.</p>
+          )}
         </div>
-        <a href="/blog/" class="text-sm" style="color: rgba(229,229,229,0.55);">Ver blog</a>
-      </div>
+      </section>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        {arts.map((a) => (
-          <a href={`/blog/${a.slug}/`} class="rounded-3xl p-6 block"
-            style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
-            <div class="font-semibold" style="color:#e5e5e5;">{a.title}</div>
-            {(a.description ?? a.excerpt) && (
-              <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">
-                {a.description ?? a.excerpt}
-              </p>
-            )}
+
+      <!-- PRODUCTOS -->
+      <section>
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5"
+              style="color: rgb(var(--brand));">Selección</p>
+            <h2 class="font-display text-xl font-bold tracking-tight"
+              style="color: rgb(var(--text));">Productos recientes</h2>
+          </div>
+          <a href="/productos/"
+            class="font-body text-sm transition-colors duration-150"
+            style="color: rgba(var(--muted),.38);"
+            onmouseover="this.style.color='rgb(var(--brand-2))'"
+            onmouseout="this.style.color='rgba(var(--muted),.38)'">
+            Ver todos →
           </a>
-        ))}
-      </div>
-    </section>
+        </div>
 
-  </main>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {prods.length > 0 ? prods.map((p) => {
+            const img =
+              p.images?.[0]?.formats?.small?.url ??
+              p.images?.[0]?.formats?.thumbnail?.url ??
+              p.images?.[0]?.url ?? null;
+            const imgAbs = img ? abs(img) : null;
+            return (
+              <a href={`/productos/${p.slug}/`}
+                class="prod-card panel block overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+                onmouseover="this.style.borderColor='rgba(var(--brand),.28)'; this.style.boxShadow='0 16px 44px rgba(0,0,0,.40)'"
+                onmouseout="this.style.borderColor='rgba(var(--border),.08)'; this.style.boxShadow='none'">
+                <div class="prod-img aspect-[4/3] overflow-hidden"
+                  style="background: rgba(var(--border),.025);">
+                  {imgAbs
+                    ? <img src={imgAbs} alt={p.name} class="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.03]"/>
+                    : <div class="w-full h-full flex items-center justify-center text-xs"
+                        style="color: rgba(var(--muted),.22);">Sin imagen</div>
+                  }
+                </div>
+                <div class="p-6">
+                  <div class="font-display font-semibold text-sm leading-snug"
+                    style="color: rgb(var(--text));">{p.name}</div>
+                  {p.shortDescription && (
+                    <p class="font-body mt-2 text-xs leading-relaxed line-clamp-2"
+                      style="color: rgba(var(--muted),.48);">{p.shortDescription}</p>
+                  )}
+                  <div class="mt-5 flex items-center justify-between">
+                    {typeof p.price === "number"
+                      ? <span class="font-display font-extrabold text-base tracking-tight"
+                          style="color: rgb(var(--text));">
+                          {new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(p.price)}
+                        </span>
+                      : <span/>
+                    }
+                    <span class="font-body text-xs font-medium"
+                      style="color: rgb(var(--brand-2));">Ver ficha →</span>
+                  </div>
+                </div>
+              </a>
+            );
+          }) : (
+            <p class="font-body text-sm col-span-3"
+              style="color: rgba(var(--muted),.30);">Sin productos disponibles.</p>
+          )}
+        </div>
+      </section>
+
+
+      <!-- BLOG -->
+      <section>
+        <div class="flex items-end justify-between mb-6">
+          <div>
+            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5"
+              style="color: rgb(var(--brand));">Blog</p>
+            <h2 class="font-display text-xl font-bold tracking-tight"
+              style="color: rgb(var(--text));">Artículos clave</h2>
+          </div>
+          <a href="/blog/"
+            class="font-body text-sm transition-colors duration-150"
+            style="color: rgba(var(--muted),.38);"
+            onmouseover="this.style.color='rgb(var(--brand-2))'"
+            onmouseout="this.style.color='rgba(var(--muted),.38)'">
+            Ver blog →
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {arts.length > 0 ? arts.map((a, i) => (
+            <a href={`/blog/${a.slug}/`}
+              class="art-card panel-2 block px-7 py-7 transition-all duration-200 hover:-translate-y-0.5"
+              onmouseover="this.style.borderColor='rgba(var(--border),.16)'"
+              onmouseout="this.style.borderColor='rgba(var(--border),.08)'">
+              <div class="font-body text-[.65rem] font-semibold tracking-widest mb-4 uppercase"
+                style="color: rgba(var(--muted),.22);">0{i+1}</div>
+              <div class="font-display font-semibold text-sm leading-snug"
+                style="color: rgb(var(--text));">{a.title}</div>
+              {(a.description ?? a.excerpt) && (
+                <p class="font-body mt-2.5 text-xs leading-relaxed line-clamp-3"
+                  style="color: rgba(var(--muted),.48);">
+                  {a.description ?? a.excerpt}
+                </p>
+              )}
+              <span class="font-body mt-5 inline-flex items-center gap-1 text-xs font-medium"
+                style="color: rgb(var(--brand-2));">
+                Leer artículo →
+              </span>
+            </a>
+          )) : (
+            <p class="font-body text-sm col-span-3"
+              style="color: rgba(var(--muted),.30);">Sin artículos disponibles.</p>
+          )}
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
 </BaseLayout>

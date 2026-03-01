@@ -20,7 +20,7 @@ export const site = {
       { label: "Categorías", href: "/categorias" },
       { label: "Blog", href: "/blog" },
       { label: "Contacto", href: "/contacto" },
-      { label: "Carrito", href: "/carrito" },
+      
     ],
   
     primaryCta: { label: "Ver productos", href: "/productos" },

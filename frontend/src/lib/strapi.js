@@ -2,10 +2,17 @@
 import { STRAPI_URL, PUBLIC_STRAPI_URL } from "./urls.js";
 
 export function absoluteUrl(path) {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  const base = (STRAPI_URL || PUBLIC_STRAPI_URL || "").replace(/\/$/, "");
-  return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+  if (!path || typeof path !== "string") return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+
+  const base =
+    (import.meta.env.SSR ? import.meta.env.STRAPI_URL : import.meta.env.PUBLIC_STRAPI_URL) ||
+    STRAPI_URL ||
+    PUBLIC_STRAPI_URL ||
+    "";
+
+  const clean = base.replace(/\/$/, "");
+  return `${clean}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
 export async function strapiFetch(path, options = {}) {

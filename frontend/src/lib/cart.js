@@ -1,41 +1,52 @@
 const KEY = "zetagadget_cart_v1";
 
-export function getCart() {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) || "[]");
-  } catch {
-    return [];
-  }
+export function readCart() {
+  try { return JSON.parse(localStorage.getItem(KEY) || "[]"); }
+  catch { return []; }
 }
 
-export function saveCart(items) {
+export function writeCart(items) {
   localStorage.setItem(KEY, JSON.stringify(items));
-  // Payload estándar: { cart: [...] }
-  window.dispatchEvent(new CustomEvent("cart:updated", { detail: { cart: items } }));
+  window.dispatchEvent(new Event("cart:updated"));
 }
 
-export function cartCount(items = getCart()) {
-  return items.reduce((acc, it) => acc + (it.qty || 1), 0);
-}
+export function addToCart(item) {
+  const cart = readCart();
+  const id = String(item.id ?? item.slug ?? "");
+  const qtyToAdd = Number(item.qty) || 1;
 
-export function addToCart(product) {
-  const items = getCart();
-  const idx = items.findIndex((i) => i.id === product.id);
-  if (idx >= 0) items[idx].qty += 1;
-  else items.push({ ...product, qty: 1 });
-  saveCart(items);
-}
+  const found = cart.find((x) => String(x.id) === id);
+  if (found) found.qty = (Number(found.qty) || 1) + qtyToAdd;
+  else cart.push({ ...item, id, qty: qtyToAdd });
 
-export function removeFromCart(id) {
-  const items = getCart().filter((i) => i.id !== id);
-  saveCart(items);
+  writeCart(cart);
 }
 
 export function setQty(id, qty) {
-  const items = getCart().map((i) => (i.id === id ? { ...i, qty } : i));
-  saveCart(items.filter((i) => i.qty > 0));
+  const cart = readCart();
+  const idx = cart.findIndex((x) => String(x.id) === String(id));
+  if (idx === -1) return;
+
+  const q = Number(qty) || 0;
+  if (q <= 0) cart.splice(idx, 1);
+  else cart[idx].qty = q;
+
+  writeCart(cart);
 }
 
-export function clearCart() {
-  saveCart([]);
+export function incQty(id, delta = 1) {
+  const cart = readCart();
+  const idx = cart.findIndex((x) => String(x.id) === String(id));
+  if (idx === -1) return;
+
+  const next = (Number(cart[idx].qty) || 1) + (Number(delta) || 1);
+  if (next <= 0) cart.splice(idx, 1);
+  else cart[idx].qty = next;
+
+  writeCart(cart);
+}
+
+export function removeFromCart(id) {
+  const cart = readCart().filter((x) => String(x.id) !== String(id));
+  writeCart(cart);
 }
