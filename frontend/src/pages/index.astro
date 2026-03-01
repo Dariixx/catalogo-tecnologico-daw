@@ -1,325 +1,157 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import ProductCard from "../components/ProductCard.astro";
-import CategoryCard from "../components/CategoryCard.astro";
-import ArticleCard from "../components/ArticleCard.astro";
-import { getReadingTimeMinutes } from "../lib/readingTime";
 import { STRAPI_URL } from "../lib/urls.js";
 
-let featuredProducts = [];
-let categories = [];
-let articles = [];
+const pick = (arr, n = 3) => (Array.isArray(arr) ? arr.slice(0, n) : []);
+
+const abs = (u) => {
+  if (!u) return null;
+  if (/^https?:\/\//i.test(u)) return u;
+  return `${String(STRAPI_URL).replace(/\/$/, "")}${u.startsWith("/") ? "" : "/"}${u}`;
+};
+
+let cats = [];
+let prods = [];
+let arts = [];
 
 try {
-  const [productsRes, categoriesRes, articlesRes] = await Promise.all([
-    fetch(
-      `${STRAPI_URL}/api/products?filters[featured][$eq]=true&pagination[limit]=4&sort=createdAt:desc&populate[images]=true&populate[category]=true`
-    ),
-    fetch(`${STRAPI_URL}/api/categories?pagination[limit]=6&sort=name:asc`),
-    fetch(`${STRAPI_URL}/api/products?pagination[limit]=4&sort=createdAt:desc&populate[images]=true&populate[category]=true`),
+  const [cRes, pRes, aRes] = await Promise.all([
+    fetch(`${STRAPI_URL}/api/categories?sort=name:asc&pagination[pageSize]=3`),
+    fetch(`${STRAPI_URL}/api/products?sort=createdAt:desc&pagination[pageSize]=3&populate=*`),
+    fetch(`${STRAPI_URL}/api/articles?sort=publishedAt:desc&pagination[pageSize]=3&populate=*`),
   ]);
 
-  const productsData = await productsRes.json();
-  const categoriesData = await categoriesRes.json();
-  const articlesData = await articlesRes.json();
+  const c = await cRes.json();
+  const p = await pRes.json();
+  const a = await aRes.json();
 
-  featuredProducts = productsData?.data ?? [];
-  categories = categoriesData?.data ?? [];
-  articles = articlesData?.data ?? [];
-} catch {}
+  cats = pick(c?.data, 3).map((x) => x?.attributes ?? x);
+  prods = pick(p?.data, 3).map((x) => x?.attributes ?? x);
+  arts = pick(a?.data, 3).map((x) => x?.attributes ?? x);
+} catch {
+  cats = [];
+  prods = [];
+  arts = [];
+}
 ---
 
-
 <BaseLayout
-  title="ZetaGadget — Tu tienda tech de confianza"
-  description="Descubre los mejores gadgets y productos tecnológicos. Envío rápido, precio justo."
+  title="ZetaGadget — Tecnología con criterio"
+  description="Selección de gadgets, comparativas y artículos para comprar con cabeza."
 >
-  <!-- ═══════════════════════════════════════
-       HERO (pro + contenido centrado en container)
-  ════════════════════════════════════════ -->
-  <section class="py-14 sm:py-16">
-    <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div
-        class="relative rounded-3xl overflow-hidden p-8 sm:p-10 lg:p-12"
-        style="background: radial-gradient(1200px 600px at 20% 0%, rgba(58,160,255,0.18), transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.08);"
-      >
-        <!-- Glow -->
-        <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-          <div
-            class="absolute -top-8 left-1/2 -translate-x-1/2 w-[680px] h-[340px] rounded-full"
-            style="background: radial-gradient(ellipse at center, rgba(30,136,229,0.16) 0%, transparent 70%); filter: blur(56px);"
-          ></div>
-        </div>
+  <main class="container-page py-10 space-y-12">
 
-        <!-- Badge -->
-        <div
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-6"
-          style="background: rgba(30,136,229,0.10); border: 1px solid rgba(30,136,229,0.25); color: #3aa0ff;"
-        >
-          <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:#3aa0ff;"></span>
-          Catálogo tecnológico con Strapi + Astro
-        </div>
+    <!-- HERO simple -->
+    <section class="rounded-3xl p-8" style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">ZetaGadget</p>
+      <h1 class="mt-2 text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">
+        Tecnología con criterio, sin humo.
+      </h1>
+      <p class="mt-3 max-w-2xl" style="color: rgba(229,229,229,0.55);">
+        Catálogo curado + blog útil para elegir mejor. Productos reales, fichas claras y comparativas.
+      </p>
 
-        <div class="max-w-2xl">
-          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight" style="color:#e5e5e5;">
-            Tecnología seleccionada para tu día a día
-            <span
-              class="block mt-2"
-              style="background: linear-gradient(90deg, #1e88e5 0%, #3aa0ff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"
-            >
-              rápida de encontrar, fácil de explorar
-            </span>
-          </h1>
-
-          <p class="mt-4 text-base sm:text-lg leading-relaxed" style="color: rgba(229,229,229,0.65);">
-            Explora categorías, descubre productos destacados y lee guías del blog. Todo gestionado desde Strapi y optimizado para SEO.
-          </p>
-
-          <!-- CTAs -->
-          <div class="mt-6 flex flex-col sm:flex-row gap-3">
-            <a
-              href="/productos"
-              class="inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
-              style="background:#1e88e5;color:#fff;border:1px solid #1e88e5; box-shadow: 0 8px 28px rgba(30,136,229,0.22);"
-              onmouseover="this.style.background='#3aa0ff';"
-              onmouseout="this.style.background='#1e88e5';"
-            >
-              Ver productos
-            </a>
-
-            <a
-              href="/categorias"
-              class="inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
-              style="background: rgba(255,255,255,0.06); color: #e5e5e5; border: 1px solid rgba(255,255,255,0.10);"
-              onmouseover="this.style.borderColor='rgba(58,160,255,0.35)';"
-              onmouseout="this.style.borderColor='rgba(255,255,255,0.10)';"
-            >
-              Explorar categorías
-            </a>
-          </div>
-
-          
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="w-full h-px" style="background: rgba(255,255,255,0.06);"></div>
-
-  <!-- ═══════════════════════════════════════
-       CATEGORÍAS
-  ════════════════════════════════════════ -->
-  <section class="py-14 sm:py-16">
-    <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div class="flex items-end justify-between mb-8 gap-4">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#1e88e5;">Explorar</p>
-          <h2 class="text-2xl sm:text-3xl font-bold" style="color:#e5e5e5;">Categorías destacadas</h2>
-          <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">Accede rápido a lo que te interesa.</p>
-        </div>
-
-        <a href="/categorias" class="shrink-0 inline-flex items-center gap-2 text-sm font-semibold" style="color: rgba(58,160,255,0.9);">
-          Ver todas
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M3 7h8M7.5 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a href="/productos/" class="px-5 py-3 rounded-xl text-sm font-semibold"
+          style="background:#1e88e5;color:#fff;border:1px solid #1e88e5;">
+          Ver catálogo
+        </a>
+        <a href="/blog/" class="px-5 py-3 rounded-xl text-sm font-semibold"
+          style="background: rgba(255,255,255,0.06); color: rgba(229,229,229,0.85); border:1px solid rgba(255,255,255,0.10);">
+          Leer blog
         </a>
       </div>
+    </section>
 
-      {categories.length > 0 ? (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((cat: any) => {
-            const c = cat.attributes ?? cat;
-            return <CategoryCard category={{ name: c.name, slug: c.slug, description: c.description }} />;
-          })}
-        </div>
-      ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map(() => (
-            <div class="h-40 rounded-2xl animate-pulse" style="background: rgba(21,26,34,0.7); border: 1px solid rgba(255,255,255,0.05);"></div>
-          ))}
-        </div>
-      )}
-    </div>
-  </section>
-
-  <div class="w-full h-px" style="background: rgba(255,255,255,0.06);"></div>
-
-    <!-- ═══════════════════════════════════════
-       PRODUCTOS DESTACADOS
-  ════════════════════════════════════════ -->
-  <section class="py-14 sm:py-16">
-    <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div class="flex items-end justify-between mb-8 gap-4">
+    <!-- CATEGORÍAS (3) -->
+    <section>
+      <div class="flex items-end justify-between mb-5">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#1e88e5;">Selección</p>
-          <h2 class="text-2xl sm:text-3xl font-bold" style="color:#e5e5e5;">Productos destacados</h2>
-          <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">Lo mejor para empezar a explorar.</p>
+          <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Explorar</p>
+          <h2 class="text-xl font-bold" style="color:#e5e5e5;">Categorías destacadas</h2>
         </div>
-
-        <a href="/productos" class="shrink-0 inline-flex items-center gap-2 text-sm font-semibold" style="color: rgba(58,160,255,0.9);">
-          Ver todos
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M3 7h8M7.5 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </a>
+        <a href="/categorias/" class="text-sm" style="color: rgba(229,229,229,0.55);">Ver todas</a>
       </div>
 
-      {featuredProducts.length > 0 ? (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((item: any) => {
-            const p = item.attributes ?? item;
-            const cat = p.category?.data?.attributes ?? p.category ?? null;
-
-            const firstImgRel = p.images?.data?.[0]?.attributes?.url ?? null;
-            const firstImgAbs = firstImgRel ? new URL(firstImgRel, STRAPI_URL).toString() : null;
-
-            return (
-              <ProductCard
-                product={{
-                  id: item.id ?? p.id ?? p.slug,
-                  name: p.name,
-                  slug: p.slug,
-                  price: p.price,
-                  shortDescription: p.shortDescription ?? p.short_description,
-                  imageUrl: firstImgAbs,
-                  featured: p.featured ?? false,
-                  stock: p.stock ?? 0,
-                  category: cat ? { name: cat.name, slug: cat.slug } : undefined,
-                }}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 4 }).map(() => (
-            <div
-              class="rounded-2xl overflow-hidden animate-pulse"
-              style="background: rgba(21,26,34,0.7); border: 1px solid rgba(255,255,255,0.05);"
-            >
-              <div class="aspect-[4/3]" style="background: rgba(255,255,255,0.03);"></div>
-              <div class="p-5 flex flex-col gap-3">
-                <div class="h-3 rounded-full w-1/3" style="background: rgba(255,255,255,0.06);"></div>
-                <div class="h-4 rounded-full w-3/4" style="background: rgba(255,255,255,0.06);"></div>
-                <div class="h-3 rounded-full w-full" style="background: rgba(255,255,255,0.04);"></div>
-                <div class="h-3 rounded-full w-2/3" style="background: rgba(255,255,255,0.04);"></div>
-                <div class="h-9 rounded-xl mt-2" style="background: rgba(255,255,255,0.05);"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </section>
-  <div class="w-full h-px" style="background: rgba(255,255,255,0.06);"></div>
-
-  <!-- ═══════════════════════════════════════
-       BLOG
-  ════════════════════════════════════════ -->
-  <section class="py-14 sm:py-16">
-    <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div class="flex items-end justify-between mb-8 gap-4">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#1e88e5;">Blog</p>
-          <h2 class="text-2xl sm:text-3xl font-bold" style="color:#e5e5e5;">Últimos artículos</h2>
-          <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">Guías y contenido técnico.</p>
-        </div>
-
-        <a href="/blog" class="shrink-0 inline-flex items-center gap-2 text-sm font-semibold" style="color: rgba(58,160,255,0.9);">
-          Ver todos
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M3 7h8M7.5 4l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </a>
-      </div>
-
-      {articles.length > 0 ? (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {articles.map((item: any) => {
-            const a = item.attributes ?? item;
-            const author = a.author?.data?.attributes ?? a.author ?? null;
-            return (
-              <ArticleCard
-                article={{
-                  title: a.title,
-                  slug: a.slug,
-                  description: a.description ?? a.excerpt,
-                  coverUrl: a.cover?.data?.attributes?.url ?? a.coverUrl ?? null,
-                  authorName: author?.name ?? a.authorName ?? null,
-                  publishedAt: a.publishedAt,
-                  readingTime: getReadingTimeMinutes({ content: a.content, blocks: a.blocks }),
-                }}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 3 }).map(() => (
-            <div class="rounded-2xl overflow-hidden animate-pulse" style="background: rgba(21,26,34,0.7); border: 1px solid rgba(255,255,255,0.05);">
-              <div class="h-44" style="background: rgba(255,255,255,0.03);"></div>
-              <div class="p-5 flex flex-col gap-3">
-                <div class="h-4 rounded-full w-4/5" style="background: rgba(255,255,255,0.06);"></div>
-                <div class="h-3 rounded-full w-full" style="background: rgba(255,255,255,0.04);"></div>
-                <div class="h-3 rounded-full w-2/3" style="background: rgba(255,255,255,0.04);"></div>
-                <div class="flex gap-3 mt-1">
-                  <div class="h-3 rounded-full w-16" style="background: rgba(255,255,255,0.04);"></div>
-                  <div class="h-3 rounded-full w-20" style="background: rgba(255,255,255,0.04);"></div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════
-       BANNER CTA FINAL (con container)
-  ════════════════════════════════════════ -->
-  <section class="py-14 sm:py-16">
-    <div class="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-      <div
-        class="relative rounded-3xl overflow-hidden px-8 py-14 flex flex-col items-center text-center"
-        style="background: #151a22; border: 1px solid rgba(58,160,255,0.22);"
-      >
-        <div aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div
-            class="w-[560px] h-[220px] rounded-full"
-            style="background: radial-gradient(ellipse at center, rgba(30,136,229,0.12) 0%, transparent 70%); filter: blur(44px);"
-          ></div>
-        </div>
-
-        <h2 class="text-2xl sm:text-3xl font-bold z-10 max-w-lg" style="color: #e5e5e5;">
-          ¿Buscas algo en concreto?
-        </h2>
-        <p class="mt-3 text-sm sm:text-base max-w-md z-10" style="color: rgba(229,229,229,0.55);">
-          Usa el buscador, filtra por categoría y encuentra exactamente lo que necesitas.
-        </p>
-
-        <div class="mt-7 flex flex-wrap items-center justify-center gap-3 z-10">
-          <a
-            href="/productos"
-            class="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
-            style="background: #1e88e5; color: #fff; box-shadow: 0 8px 28px rgba(30,136,229,0.22);"
-            onmouseover="this.style.background='#3aa0ff';"
-            onmouseout="this.style.background='#1e88e5';"
-          >
-            Buscar productos
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {cats.map((c) => (
+          <a href={`/categorias/${c.slug}/`} class="rounded-3xl p-6 block"
+            style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+            <div class="text-sm font-semibold" style="color:#e5e5e5;">{c.name}</div>
+            {c.description && <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">{c.description}</p>}
           </a>
-
-          <a
-            href="/categorias"
-            class="px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
-            style="background: rgba(255,255,255,0.06); color: #e5e5e5; border: 1px solid rgba(255,255,255,0.10);"
-            onmouseover="this.style.borderColor='rgba(58,160,255,0.35)';"
-            onmouseout="this.style.borderColor='rgba(255,255,255,0.10)';"
-          >
-            Ver categorías
-          </a>
-        </div>
+        ))}
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- PRODUCTOS (3) -->
+    <section>
+      <div class="flex items-end justify-between mb-5">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Selección</p>
+          <h2 class="text-xl font-bold" style="color:#e5e5e5;">Productos recientes</h2>
+        </div>
+        <a href="/productos/" class="text-sm" style="color: rgba(229,229,229,0.55);">Ver todos</a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {prods.map((p) => {
+          const img =
+            p.images?.[0]?.formats?.small?.url ??
+            p.images?.[0]?.formats?.thumbnail?.url ??
+            p.images?.[0]?.url ??
+            null;
+          const imgAbs = img ? abs(img) : null;
+
+          return (
+            <a href={`/productos/${p.slug}/`} class="rounded-3xl overflow-hidden block"
+              style="background:#151a22;border:1px solid rgba(255,255,255,0.08);">
+              <div class="aspect-[4/3]" style="background: rgba(255,255,255,0.03);">
+                {imgAbs ? (
+                  <img src={imgAbs} alt={p.name} class="w-full h-full object-cover" loading="lazy" decoding="async" />
+                ) : (
+                  <div class="w-full h-full flex items-center justify-center text-sm" style="color: rgba(229,229,229,0.45);">Sin imagen</div>
+                )}
+              </div>
+              <div class="p-5">
+                <div class="font-semibold" style="color:#e5e5e5;">{p.name}</div>
+                {p.shortDescription && <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">{p.shortDescription}</p>}
+                {typeof p.price === "number" && (
+                  <div class="mt-3 font-extrabold" style="color:#e5e5e5;">
+                    {new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(p.price)}
+                  </div>
+                )}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+
+    <!-- BLOG (3) -->
+    <section>
+      <div class="flex items-end justify-between mb-5">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Autoridad</p>
+          <h2 class="text-xl font-bold" style="color:#e5e5e5;">Artículos clave</h2>
+        </div>
+        <a href="/blog/" class="text-sm" style="color: rgba(229,229,229,0.55);">Ver blog</a>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {arts.map((a) => (
+          <a href={`/blog/${a.slug}/`} class="rounded-3xl p-6 block"
+            style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+            <div class="font-semibold" style="color:#e5e5e5;">{a.title}</div>
+            {(a.description ?? a.excerpt) && (
+              <p class="mt-2 text-sm" style="color: rgba(229,229,229,0.55);">
+                {a.description ?? a.excerpt}
+              </p>
+            )}
+          </a>
+        ))}
+      </div>
+    </section>
+
+  </main>
 </BaseLayout>

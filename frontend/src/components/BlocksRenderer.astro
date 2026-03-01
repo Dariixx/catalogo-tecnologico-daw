@@ -1,0 +1,66 @@
+---
+const { blocks = [] } = Astro.props;
+
+function textFrom(children) {
+  if (!children) return "";
+  if (typeof children === "string") return children;
+  if (Array.isArray(children)) return children.map(textFrom).join("");
+  if (children.text) return children.text;
+  if (children.children) return children.children.map(textFrom).join("");
+  return "";
+}
+---
+
+{Array.isArray(blocks) && blocks.map((b) => {
+  const type = b?.type;
+
+  if (type === "heading") {
+    const level = Number(b?.level || 2);
+    const Tag = (`h${Math.min(4, Math.max(2, level))}`) as any;
+    return <Tag class="mt-6 mb-2 font-semibold text-white">{textFrom(b.children)}</Tag>;
+  }
+
+  if (type === "paragraph") {
+    const t = textFrom(b.children).trim();
+    if (!t) return null;
+    return <p class="mb-4 text-gray-300 leading-relaxed">{t}</p>;
+  }
+
+  if (type === "list") {
+    const ordered = b?.format === "ordered";
+    const items = (b?.children || []).map((li) => textFrom(li?.children || li)).filter(Boolean);
+    if (!items.length) return null;
+
+    return ordered ? (
+      <ol class="list-decimal pl-6 text-gray-300 space-y-1 mb-4">
+        {items.map((t) => <li>{t}</li>)}
+      </ol>
+    ) : (
+      <ul class="list-disc pl-6 text-gray-300 space-y-1 mb-4">
+        {items.map((t) => <li>{t}</li>)}
+      </ul>
+    );
+  }
+
+  if (type === "quote") {
+    const t = textFrom(b.children).trim();
+    if (!t) return null;
+    return (
+      <blockquote class="my-6 border-l-4 border-blue-500/60 bg-blue-500/5 px-4 py-3 rounded-r-xl text-gray-200 italic">
+        {t}
+      </blockquote>
+    );
+  }
+
+  if (type === "code") {
+    const code = (b?.code || textFrom(b.children)).trim();
+    if (!code) return null;
+    return (
+      <pre class="my-6 overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-gray-200">
+        <code>{code}</code>
+      </pre>
+    );
+  }
+
+  return null;
+})}

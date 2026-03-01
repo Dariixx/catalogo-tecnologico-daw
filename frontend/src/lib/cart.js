@@ -10,7 +10,8 @@ export function getCart() {
 
 export function saveCart(items) {
   localStorage.setItem(KEY, JSON.stringify(items));
-  window.dispatchEvent(new CustomEvent("cart:updated", { detail: items }));
+  // Payload estándar: { cart: [...] }
+  window.dispatchEvent(new CustomEvent("cart:updated", { detail: { cart: items } }));
 }
 
 export function cartCount(items = getCart()) {

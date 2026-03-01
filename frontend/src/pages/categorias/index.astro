@@ -12,7 +12,9 @@ let categories = [];
 
 try {
   const res = await fetch(
-    `${STRAPI_URL}/api/categories?populate=*&pagination[limit]=100&sort=name:asc`
+     `${STRAPI_URL}/api/categories?` +
+  `fields[0]=name&fields[1]=slug&` +
+  `sort=name:asc&pagination[pageSize]=100`
   );
   const data = await res.json();
   categories = data?.data ?? [];

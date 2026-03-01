@@ -1,0 +1,66 @@
+---
+---
+import ProductCard from "../../components/ProductCard.astro";
+import { mapProductCard } from "../../lib/mappers.js";
+
+const mapped = products.map(mapProductCard);
+---
+{mapped.map(p => <ProductCard product={p} />)}
+import { absoluteUrl } from "../../lib/strapi.js";
+
+const { products = [] } = Astro.props;
+
+function mapProduct(p) {
+  const images = Array.isArray(p?.images) ? p.images : [];
+  const imageUrl = images[0]?.url ? absoluteUrl(images[0].url) : null;
+
+  return {
+    id: p?.id ?? p?.documentId ?? p?.slug,
+    name: p?.name,
+    slug: p?.slug,
+    price: Number(p?.price ?? 0),
+    shortDescription: p?.shortDescription ?? null,
+    imageUrl,
+    featured: !!p?.featured,
+    stock: Number(p?.stock ?? 0),
+    category: p?.category ? { name: p.category.name, slug: p.category.slug } : null,
+  };
+}
+
+const items = Array.isArray(products) ? products.map(mapProduct).filter(x => x?.slug && x?.name) : [];
+---
+<section class="mb-12">
+  <div class="flex items-end justify-between mb-6">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#1e88e5;">
+        Selección
+      </p>
+      <h2 class="text-xl sm:text-2xl font-extrabold" style="color:#e5e5e5;">
+        Lo más recomendado ahora
+      </h2>
+      <p class="mt-1 text-sm" style="color:rgba(229,229,229,0.55);">
+        Productos elegidos por equilibrio calidad-precio y uso real.
+      </p>
+    </div>
+    <a
+      href="/productos/"
+      class="hidden sm:inline-flex items-center gap-2 text-sm font-semibold"
+      style="color: rgba(229,229,229,0.55);"
+    >
+      Ver catálogo →
+    </a>
+  </div>
+
+  {items.length > 0 ? (
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {items.slice(0, 8).map((p) => (
+        <ProductCard product={p} />
+      ))}
+    </div>
+  ) : (
+    <div class="rounded-3xl p-6" style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+      <p style="color: rgba(229,229,229,0.65);">No hay productos destacados todavía.</p>
+      <a href="/productos/" style="color:#3aa0ff;" class="underline underline-offset-4">Ver catálogo</a>
+    </div>
+  )}
+</section>

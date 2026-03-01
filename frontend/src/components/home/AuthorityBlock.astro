@@ -1,0 +1,39 @@
+---
+const points = [
+  { t: "Rendimiento y uso real", d: "Recomendaciones pensadas por escenarios de uso, no por specs sueltas." },
+  { t: "Soporte y ecosistema", d: "Valoramos actualizaciones, compatibilidad y accesorios disponibles." },
+  { t: "Longevidad", d: "Durabilidad, repuestos y buen valor de reventa cuando aplica." },
+];
+---
+<section class="mb-12">
+  <div class="rounded-3xl p-8 sm:p-10" style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+    <p class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:#1e88e5;">
+      Criterio
+    </p>
+    <h2 class="text-xl sm:text-2xl font-extrabold" style="color:#e5e5e5;">
+      Cómo decidimos qué merece estar aquí
+    </h2>
+    <p class="mt-2 text-sm max-w-3xl" style="color:rgba(229,229,229,0.60);">
+      No listamos por listar. Priorizamos equilibrio, soporte, longevidad y valor real por euro.
+    </p>
+
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      {points.map((p) => (
+        <div class="rounded-2xl p-5" style="background:#151a22; border:1px solid rgba(255,255,255,0.08);">
+          <p class="text-sm font-semibold" style="color:#e5e5e5;">{p.t}</p>
+          <p class="mt-2 text-sm" style="color:rgba(229,229,229,0.55);">{p.d}</p>
+        </div>
+      ))}
+    </div>
+
+    <div class="mt-7">
+      <a
+        href="/blog/"
+        class="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition"
+        style="background: rgba(30,136,229,0.12); color:#3aa0ff; border:1px solid rgba(30,136,229,0.25);"
+      >
+        Ver guías y comparativas
+      </a>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,42 @@
+---
+const { categories = [] } = Astro.props;
+
+const items = Array.isArray(categories)
+  ? categories
+      .filter((c) => c?.slug && c?.name)
+      .slice(0, 8)
+  : [];
+---
+<section class="mb-12">
+  <div class="flex items-end justify-between mb-6">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-widest mb-1.5" style="color:#1e88e5;">
+        Explorar
+      </p>
+      <h2 class="text-xl sm:text-2xl font-extrabold" style="color:#e5e5e5;">
+        Categorías principales
+      </h2>
+      <p class="mt-1 text-sm" style="color:rgba(229,229,229,0.55);">
+        Encuentra rápido lo que buscas por tipo de producto.
+      </p>
+    </div>
+    <a href="/categorias/" class="hidden sm:inline-flex text-sm font-semibold" style="color: rgba(229,229,229,0.55);">
+      Ver todas →
+    </a>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {items.map((c) => (
+      <a
+        href={`/categorias/${c.slug}/`}
+        class="rounded-3xl p-5 transition"
+        style="background:#151a22; border:1px solid rgba(255,255,255,0.08);"
+      >
+        <p class="text-sm font-semibold" style="color:#e5e5e5;">{c.name}</p>
+        <p class="mt-1 text-xs" style="color:rgba(229,229,229,0.55);">
+          Ver productos →
+        </p>
+      </a>
+    ))}
+  </div>
+</section>

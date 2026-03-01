@@ -1,122 +1,137 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { strapiFetch, absoluteUrl } from "../../lib/strapi.js";
+import BlocksRenderer from "../../components/BlocksRenderer.astro";
+import { strapiFetch, absoluteUrl, unwrapCollection } from "../../lib/strapi.js";
 
 export async function getStaticPaths() {
-  try {
-    const res = await strapiFetch(`/products?pagination[limit]=1000&fields=slug`);
-    const items = res?.data ?? [];
-    return items
-      .map((it) => ({
-        params: { slug: (it.attributes ?? it)?.slug },
-      }))
-      .filter((x) => !!x.params.slug);
-  } catch {
-    return [];
-  }
+  const base = import.meta.env.STRAPI_URL;
+  if (!base) throw new Error("Falta STRAPI_URL en el entorno de build");
+
+  const url = `${base}/api/products?fields[0]=slug&pagination[pageSize]=1000`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Strapi no respondió (${res.status}) al generar static paths`);
+
+  const json = await res.json();
+  const items = json?.data ?? [];
+
+  return items
+    .filter((x) => x?.slug)
+    .map((x) => ({ params: { slug: x.slug } }));
 }
 
 const { slug } = Astro.params;
-const safeSlug = encodeURIComponent(slug);
 
-const res = await strapiFetch(
-  `/products?filters[slug][$eq]=${safeSlug}&populate=images,category,category.category,seo.shareImage,specifications`
+const productRes = await strapiFetch(
+  `/products?filters[slug][$eq]=${encodeURIComponent(slug)}&populate=*`
 );
 
-const item = res?.data?.[0];
-if (!item) return Astro.redirect("/productos");
+const products = unwrapCollection(productRes);
+const p = products[0];
+if (!p) throw new Error(`Producto no encontrado para slug: ${slug}`);
 
-const p = item.attributes ?? item;
+const canonical = `/productos/${slug}/`;
 
-/* SEO */
-const title = p?.seo?.metaTitle ?? `${p?.name ?? "Producto"} | ZetaGadget`;
-const description = p?.seo?.metaDescription ?? p?.shortDescription ?? "";
-const rawImage =
-  p?.seo?.shareImage?.data?.attributes?.url ??
-  p?.images?.data?.[0]?.attributes?.url ??
-  null;
+// ✅ Tu API usa "images" (array), no "image"
+const images = Array.isArray(p?.images) ? p.images : [];
+const mainImage = images[0]?.url ? absoluteUrl(images[0].url) : null;
 
-const image = rawImage ? absoluteUrl(rawImage) : undefined;
-const canonical = `/productos/${p?.slug ?? slug}`;
+const thumbUrl = (img) =>
+  absoluteUrl(img?.formats?.thumbnail?.url || img?.formats?.small?.url || img?.url);
 
-/* Datos */
+const gallery = images.map((img) => ({
+  url: absoluteUrl(img?.url),
+  thumb: thumbUrl(img),
+  alt: img?.alternativeText || p?.name || "Imagen producto",
+}));
+
+const category = p?.category ?? null;
+const cat = category;
+
+const featured = Boolean(p?.featured);
+
 const priceNumber = Number(p?.price ?? 0);
-const formattedPrice =
-  priceNumber > 0
-    ? new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(priceNumber)
-    : "";
+const formattedPrice = new Intl.NumberFormat("es-ES", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+}).format(priceNumber);
 
 const stock = Number(p?.stock ?? 0);
 const inStock = stock > 0;
 
-const images = (p?.images?.data ?? [])
-  .map((x) => x?.attributes ?? x)
-  .filter(Boolean);
+const specs = Array.isArray(p?.specifications) ? p.specifications : [];
 
-const mainImage = images?.[0]?.url ? absoluteUrl(images[0].url) : null;
+// Strapi: description viene como blocks (array) en tu modelo
+const longDescriptionBlocks = Array.isArray(p?.description) ? p.description : null;
 
-const cat = p?.category?.data?.attributes ?? p?.category ?? null;
-const parentCat = cat?.category?.data?.attributes ?? cat?.category ?? null;
+// Thumbs para UI (usa thumb si existe; si no, la imagen normal)
+const thumbs = gallery.map((g) => ({
+  url: g.thumb || g.url,
+  full: g.url,
+  alt: g.alt,
+}));
 
-const specs =
-  Array.isArray(p?.specifications)
-    ? p.specifications
-    : Array.isArray(p?.specifications?.data)
-      ? p.specifications.data.map((x) => x.attributes ?? x)
-      : [];
-
-const longDescription = p?.description ?? null;
-const featured = !!p?.featured;
+const title = p?.name || "Producto";
+const description = p?.shortDescription || "Producto en ZetaGadget";
 ---
 
-<BaseLayout title={title} description={description} image={image} canonical={canonical}>
+<BaseLayout title={title} description={description} image={mainImage ?? undefined} canonical={canonical}>
   <main class="container-page py-10">
-
     <!-- Breadcrumb -->
-    <nav class="mb-8">
-      <ol class="flex flex-wrap items-center gap-1.5 text-sm px-4 py-3 rounded-2xl"
-        style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);">
+    <nav class="mb-8" aria-label="Breadcrumb">
+      <ol
+        class="flex flex-wrap items-center gap-1.5 text-sm px-4 py-3 rounded-2xl"
+        style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);"
+      >
         <li><a href="/" style="color:rgba(229,229,229,.55)">Inicio</a></li>
-        <li>›</li>
+        <li style="color:rgba(229,229,229,.25)">›</li>
         <li><a href="/productos" style="color:rgba(229,229,229,.55)">Productos</a></li>
-        {cat && (
+
+        {cat?.slug && (
           <>
-            <li>›</li>
+            <li style="color:rgba(229,229,229,.25)">›</li>
             <li>
-              <a href={`/categorias/${cat.slug}`} style="color:rgba(229,229,229,.55)">
-                {parentCat ? `${parentCat.name} / ` : ""}{cat.name}
+              <a href={`/categorias/${cat.slug}/`} style="color:rgba(229,229,229,.55)">
+                {cat.name ?? "Categoría"}
               </a>
             </li>
           </>
         )}
-        <li>›</li>
-        <li class="font-semibold" style="color:#e5e5e5">{p?.name}</li>
+
+        <li style="color:rgba(229,229,229,.25)">›</li>
+        <li class="font-semibold truncate max-w-[260px] sm:max-w-md" style="color:#e5e5e5">{p?.name}</li>
       </ol>
     </nav>
 
     <!-- GRID -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-
       <!-- IMÁGENES -->
       <section class="lg:sticky lg:top-24">
-        <div class="rounded-3xl overflow-hidden"
-          style="background:#151a22;border:1px solid rgba(255,255,255,.08);">
-
+        <div
+          class="rounded-3xl overflow-hidden"
+          style="background:#151a22;border:1px solid rgba(255,255,255,.08);"
+        >
           <div class="relative">
             {featured && (
               <div class="absolute top-4 left-4 z-10">
-                <span class="px-3 py-1 rounded-full text-xs font-semibold"
-                  style="background:rgba(30,136,229,.2);color:#3aa0ff;">
+                <span
+                  class="px-3 py-1 rounded-full text-xs font-semibold"
+                  style="background:rgba(30,136,229,.2);color:#3aa0ff;"
+                >
                   Destacado
                 </span>
               </div>
             )}
 
             {mainImage ? (
-              <img id="mainImage"
+              <img
+                id="mainImage"
                 src={mainImage}
                 alt={p?.name}
-                class="w-full aspect-[4/3] object-cover" />
+                class="w-full aspect-[4/3] object-cover"
+                loading="eager"
+                decoding="async"
+              />
             ) : (
               <div class="w-full aspect-[4/3] bg-[#0f1115] flex items-center justify-center text-sm text-gray-400">
                 Sin imagen
@@ -124,17 +139,19 @@ const featured = !!p?.featured;
             )}
           </div>
 
-          {images.length > 1 && (
+          {thumbs.length > 1 && (
             <div class="p-4 grid grid-cols-5 gap-3">
-              {images.slice(0,5).map((img) => {
-                const url = absoluteUrl(img.url);
-                return (
-                  <button data-thumb data-src={url}
-                    class="rounded-xl overflow-hidden border border-white/10 hover:border-blue-400 transition">
-                    <img src={url} class="aspect-square object-cover w-full" />
-                  </button>
-                );
-              })}
+              {thumbs.slice(0, 5).map((img) => (
+                <button
+                  type="button"
+                  data-thumb
+                  data-src={img.full}
+                  class="rounded-xl overflow-hidden border border-white/10 hover:border-blue-400 transition"
+                  aria-label="Cambiar imagen"
+                >
+                  <img src={img.url} alt={img.alt} class="aspect-square object-cover w-full" loading="lazy" decoding="async" />
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -142,27 +159,33 @@ const featured = !!p?.featured;
 
       <!-- INFO -->
       <section class="space-y-6">
-
-        <div class="rounded-3xl p-8"
-          style="background:#151a22;border:1px solid rgba(255,255,255,.08);">
-
+        <div
+          class="rounded-3xl p-8"
+          style="background:#151a22;border:1px solid rgba(255,255,255,.08);"
+        >
           <h1 class="text-3xl font-extrabold text-white">{p?.name}</h1>
 
           {p?.shortDescription && (
             <p class="mt-3 text-gray-400">{p.shortDescription}</p>
           )}
 
-          <div class="mt-6 flex items-center justify-between">
+          <div class="mt-6 flex items-center justify-between gap-4">
             <div class="text-3xl font-extrabold text-white">{formattedPrice}</div>
-            <span class={`px-3 py-1 rounded-full text-xs font-semibold ${inStock ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
-              {inStock ? `En stock (${stock})` : "Sin stock"}
+
+            <span
+              class={`px-3 py-1 rounded-full text-xs font-semibold ${
+                inStock ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"
+              }`}
+            >
+              {inStock ? (Number.isFinite(stock) ? `En stock (${stock})` : "En stock") : "Sin stock"}
             </span>
           </div>
 
           <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
+              type="button"
               data-add-to-cart
-              data-id={item.id ?? p.slug}
+              data-id={p?.id ?? p?.slug}
               data-name={p?.name}
               data-price={priceNumber}
               disabled={!inStock}
@@ -175,35 +198,44 @@ const featured = !!p?.featured;
               Añadir al carrito
             </button>
 
-            <a href="#" onclick="event.preventDefault(); window.openCart && window.openCart()">
-  Ver carrito
-</a>
+            <a
+              href="/carrito/"
+              class="px-5 py-3 rounded-xl font-semibold text-center border border-white/10 hover:border-white/20 transition"
+              style="color: rgba(229,229,229,.85); background: rgba(255,255,255,.04);"
+            >
+              Ver carrito
+            </a>
           </div>
         </div>
 
-        {longDescription && (
-          <div class="rounded-3xl p-8"
-            style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);">
+        {longDescriptionBlocks && (
+          <div
+            class="rounded-3xl p-8"
+            style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);"
+          >
             <h2 class="text-lg font-semibold text-white">Descripción</h2>
-            <p class="mt-3 text-gray-400">{longDescription}</p>
+            <div class="mt-3 text-gray-300 leading-relaxed">
+              <BlocksRenderer blocks={longDescriptionBlocks} />
+            </div>
           </div>
         )}
 
         {specs.length > 0 && (
-          <div class="rounded-3xl p-8"
-            style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);">
+          <div
+            class="rounded-3xl p-8"
+            style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);"
+          >
             <h2 class="text-lg font-semibold text-white">Especificaciones</h2>
             <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {specs.slice(0,10).map((s:any)=>(
+              {specs.slice(0, 10).map((s) => (
                 <div class="p-4 rounded-xl border border-white/10 bg-[#151a22]">
-                  <div class="text-xs uppercase text-gray-500">{s?.label ?? s?.name}</div>
-                  <div class="text-white font-semibold mt-1">{s?.value ?? "-"}</div>
+                  <div class="text-xs uppercase text-gray-500">{s?.key ?? "—"}</div>
+                  <div class="text-white font-semibold mt-1">{s?.value ?? "—"}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
-
       </section>
     </div>
   </main>
@@ -211,21 +243,22 @@ const featured = !!p?.featured;
   <script type="module">
     import { addToCart } from "../../lib/cart.js";
 
-    document.querySelectorAll("[data-add-to-cart]").forEach((btn)=>{
-      btn.addEventListener("click", ()=>{
+    document.querySelectorAll("[data-add-to-cart]").forEach((btn) => {
+      btn.addEventListener("click", () => {
         addToCart({
           id: btn.dataset.id,
           name: btn.dataset.name,
-          price: Number(btn.dataset.price||0)
+          price: Number(btn.dataset.price || 0),
+          qty: 1,
         });
       });
     });
 
-    document.querySelectorAll("[data-thumb]").forEach((btn)=>{
-      btn.addEventListener("click", ()=>{
+    document.querySelectorAll("[data-thumb]").forEach((btn) => {
+      btn.addEventListener("click", () => {
         const src = btn.dataset.src;
         const main = document.getElementById("mainImage");
-        if(main && src) main.src = src;
+        if (main && src) main.src = src;
       });
     });
   </script>

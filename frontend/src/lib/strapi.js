@@ -1,35 +1,65 @@
 
-import qs from "qs";
-import { STRAPI_URL, STRAPI_TOKEN } from "./urls.js";
+import { STRAPI_URL, PUBLIC_STRAPI_URL } from "./urls.js";
 
-export async function strapiFetch(path, { query, options } = {}) {
-  const q = query ? `?${qs.stringify(query, { encodeValuesOnly: true })}` : "";
-  const url = `${STRAPI_URL}${path}${q}`;
+export function absoluteUrl(path) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  const base = (STRAPI_URL || PUBLIC_STRAPI_URL || "").replace(/\/$/, "");
+  return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+}
+
+export async function strapiFetch(path, options = {}) {
+  const base = (import.meta.env.SSR ? import.meta.env.STRAPI_URL : import.meta.env.PUBLIC_STRAPI_URL) || STRAPI_URL || PUBLIC_STRAPI_URL;
+  if (!base) throw new Error("Falta STRAPI_URL / PUBLIC_STRAPI_URL");
+
+  let p = path.startsWith("/") ? path : `/${path}`;
+
+  // fuerza /api
+  if (!p.startsWith("/api/")) p = `/api${p}`;
+
+  const url = `${base.replace(/\/$/, "")}${p}`;
 
   const res = await fetch(url, {
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(STRAPI_TOKEN ? { Authorization: `Bearer ${STRAPI_TOKEN}` } : {}),
-      ...(options?.headers ?? {}),
-    },
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Strapi error ${res.status} on ${path} ${text}`);
+    throw new Error(`Strapi error ${res.status} on ${p} ${text.slice(0, 200)}`);
   }
   return res.json();
 }
 
-
-export function getStrapiPagination(meta) {
-  return meta?.pagination ?? { page: 1, pageSize: 10, pageCount: 1, total: 0 };
+export function unwrapEntity(entity) {
+  if (!entity) return null;
+  // Strapi v4: { id, attributes: {...} }
+  if (entity.attributes) return { id: entity.id, ...entity.attributes };
+  // Tu API actual: { id, slug, ... }
+  return entity;
 }
-export function absoluteUrl(path) {
-  if (!path) return undefined;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
 
-  const base = STRAPI_URL.replace(/\/$/, "");
-  return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+export function unwrapCollection(json) {
+  const data = json?.data;
+  if (Array.isArray(data)) return data.map(unwrapEntity).filter(Boolean);
+  if (data) return [unwrapEntity(data)].filter(Boolean);
+  return [];
+}
+export function pickMediaUrl(media) {
+  const m =
+    media?.data?.attributes ??
+    media?.data ??
+    media?.attributes ??
+    media ??
+    null;
+
+  const rel =
+    m?.url ??
+    m?.formats?.large?.url ??
+    m?.formats?.medium?.url ??
+    m?.formats?.small?.url ??
+    m?.formats?.thumbnail?.url ??
+    null;
+
+  return absoluteUrl(rel);
 }

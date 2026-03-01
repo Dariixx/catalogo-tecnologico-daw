@@ -160,10 +160,15 @@
   closeBtn?.addEventListener("click", close);
   overlay?.addEventListener("click", close);
 
-  // Re-render cuando cambie
-  window.addEventListener("cart:updated", (e) => render(e.detail?.cart ?? []));
+  // Re-render cuando cambie (soporta detail={cart:[...]} o detail=[...])
+  window.addEventListener("cart:updated", (e) => {
+    const d = e?.detail;
+    const next = Array.isArray(d) ? d : d?.cart ?? [];
+    render(next);
+  });
 
   // Render inicial
   const api = window.ZG_CART;
-  render(api?.getCart ? api.getCart() : []);
+  const initial = api?.getCart ? api.getCart() : [];
+  render(initial);
 </script>

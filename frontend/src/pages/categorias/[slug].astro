@@ -49,9 +49,12 @@ try {
   const safeSlug = encodeURIComponent(slug ?? "");
 
   const [catRes, productsRes] = await Promise.all([
-    fetch(`${STRAPI_URL}/api/categories?filters[slug][$eq]=${safeSlug}&populate=*`),
+    fetch(`${STRAPI_URL}/api/categories?filters[slug][$eq]=${safeSlug}&fields[0]=name&fields[1]=slug`),
     fetch(
-      `${STRAPI_URL}/api/products?filters[category][slug][$eq]=${safeSlug}&populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort=createdAt:desc`
+      `${STRAPI_URL}/api/products?filters[category][slug][$eq]=${safeSlug}` +
+`&fields[0]=name&fields[1]=slug&fields[2]=price&fields[3]=shortDescription&fields[4]=featured&fields[5]=stock` +
+`&populate[image]=true&populate[category]=true` +
+`&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort=createdAt:desc`
     ),
   ]);
 

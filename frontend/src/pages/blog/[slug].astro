@@ -1,9 +1,27 @@
 ---
 // src/pages/blog/[slug].astro
-import { getReadingTimeMinutes } from "../../lib/readingTime";
+
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ArticleCard from "../../components/ArticleCard.astro";
+import { getReadingTimeMinutes } from "../../lib/readingTime";
+import { strapiFetch } from "../../lib/strapi.js";
 
+// ----------------------------------------------------
+// Helpers: soporta Strapi "attributes" o respuesta plana
+// ----------------------------------------------------
+function unwrapEntity(entity) {
+  if (!entity) return null;
+  return entity.attributes ? { id: entity.id, ...entity.attributes } : entity;
+}
+
+function unwrapCollection(json) {
+  const data = json?.data;
+  if (Array.isArray(data)) return data.map(unwrapEntity).filter(Boolean);
+  if (data) return [unwrapEntity(data)].filter(Boolean);
+  return [];
+}
+
+// Base URL para construir absolutos (fallback seguro)
 const STRAPI_URL =
   import.meta.env.STRAPI_URL ||
   process.env.STRAPI_URL ||
@@ -38,44 +56,58 @@ const pickMediaUrl = (media) => {
   return toAbs(rel);
 };
 
+// ----------------------------------------------------
+// Static paths (tu API: item.slug plano)
+// ----------------------------------------------------
 export async function getStaticPaths() {
-  try {
-    const res = await fetch(`${STRAPI_URL}/api/articles?pagination[limit]=1000&fields=slug`);
-    const data = await res.json();
-    return (data?.data ?? []).map((a) => ({
-      params: { slug: a.attributes?.slug ?? a.slug },
-    }));
-  } catch {
-    return [];
+  const base = import.meta.env.STRAPI_URL;
+  if (!base) throw new Error("Falta STRAPI_URL en el entorno de build");
+
+  const url = `${base}/api/articles?fields[0]=slug&pagination[pageSize]=1000`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Strapi no respondió (${res.status}) al generar static paths. ${text.slice(0, 200)}`);
   }
+
+  const json = await res.json();
+  const items = json?.data ?? [];
+
+  return items
+    .filter((x) => x?.slug)
+    .map((x) => ({ params: { slug: x.slug } }));
 }
 
 const { slug } = Astro.params;
 
-let article = null;
-let more = [];
+// ----------------------------------------------------
+// Fetch artículo actual
+// ----------------------------------------------------
+const articleRes = await strapiFetch(
+  `/articles?filters[slug][$eq]=${encodeURIComponent(slug)}&populate[author][populate]=avatar&populate[cover]=true`
+);
+const articles = unwrapCollection(articleRes);
+const a = articles[0];
 
-try {
-  const res = await fetch(
-    `${STRAPI_URL}/api/articles?filters[slug][$eq]=${encodeURIComponent(slug)}&populate[author][populate]=avatar&populate[cover]=true&populate[tags]=true`
-  );
-  const data = await res.json();
-  const raw = data?.data?.[0];
-  if (raw) article = raw.attributes ?? raw;
+if (!a) {
+  // En build: si llega aquí, no existe el slug o no hay permisos
+  throw new Error(`Artículo no encontrado para slug: ${slug}`);
+}
 
-  if (article) {
-    const moreRes = await fetch(
-      `${STRAPI_URL}/api/articles?filters[slug][$ne]=${encodeURIComponent(slug)}&populate[author][populate]=avatar&populate[cover]=true&populate[tags]=true&pagination[limit]=3&sort=publishedAt:desc`
-    );
-    const moreData = await moreRes.json();
-    more = moreData?.data ?? [];
-  }
-} catch {}
+// ----------------------------------------------------
+// Fetch "más artículos" (3)
+// ----------------------------------------------------
+const moreRes = await strapiFetch(
+  `/articles?filters[slug][$ne]=${encodeURIComponent(slug)}&populate[author][populate]=avatar&populate[cover]=true&pagination[pageSize]=3&sort=publishedAt:desc`
+);
 
-if (!article) return Astro.redirect("/blog");
+const moreRaw = unwrapCollection(moreRes);
+const more = moreRaw.slice(0, 3);
 
-const a = article;
-
+// ----------------------------------------------------
+// Derived data
+// ----------------------------------------------------
 const readingMinutes = getReadingTimeMinutes({
   content: a.content,
   blocks: a.blocks,
@@ -181,7 +213,7 @@ const blocksHtml = !a.content ? renderBlocks(a.blocks) : "";
   title={`${a.title} — Blog ZetaGadget`}
   description={description}
   image={coverUrl ?? undefined}
-  canonical={`/blog/${slug}`}
+  canonical={`/blog/${slug}/`}
 >
   <main class="container-page py-10">
     <!-- Breadcrumbs -->
@@ -404,9 +436,7 @@ const blocksHtml = !a.content ? renderBlocks(a.blocks) : "";
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {more.map((item: any) => {
-            const m = item?.attributes ?? item;
-
+          {more.map((m: any) => {
             const mauthor =
               m.author?.data?.attributes ??
               m.author?.data ??

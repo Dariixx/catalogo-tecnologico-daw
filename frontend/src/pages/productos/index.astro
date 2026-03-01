@@ -1,36 +1,39 @@
 ---
-// src/pages/productos/index.astro
+import { absoluteUrl } from "../../lib/strapi.js";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
-import Pagination from "../../components/Pagination.astro";
-import ProductsToolbar from "../../components/ProductsToolbar.jsx";
+import { STRAPI_URL } from "../../lib/urls.js";
 
-const STRAPI_URL =
-  import.meta.env.PUBLIC_STRAPI_URL ||
-  process.env.PUBLIC_STRAPI_URL ||
-  "https://api.zetagadget.es";
+const url = new URL(Astro.request.url);
+const q = url.searchParams.get("q")?.trim() ?? "";
+const cat = url.searchParams.get("cat")?.trim() ?? "";
+const sort = url.searchParams.get("sort")?.trim() ?? "createdAt:desc";
+const page = Number(url.searchParams.get("page") ?? "1") || 1;
+const pageSize = 24;
 
-const { url } = Astro;
-const params = new URL(url).searchParams;
-
-const q = params.get("q") ?? "";
-const cat = params.get("cat") ?? "";
-const sort = params.get("sort") ?? "createdAt:desc";
-const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
-const pageSize = 12;
-
+// normalizador
 const normalize = (s = "") =>
-  s
-    .toString()
-    .toLowerCase()
+  String(s)
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 
-const escapeRegex = (s = "") => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// regex opcional (búsqueda robusta)
+let re = null;
+if (q) {
+  try {
+    re = new RegExp(normalize(q), "i");
+  } catch {
+    re = null;
+  }
+}
 
-// ✅ regex usando q (ya definido)
-const query = (q ?? "").trim();
-const re = query ? new RegExp(escapeRegex(normalize(query)), "i") : null;
+const abs = (u) => {
+  if (!u) return null;
+  if (/^https?:\/\//i.test(u)) return u;
+  return `${String(STRAPI_URL).replace(/\/$/, "")}${u.startsWith("/") ? "" : "/"}${u}`;
+};
 
 let products = [];
 let categories = [];
@@ -38,21 +41,17 @@ let pageCount = 1;
 let total = 0;
 
 try {
-  const [sortField, sortDir] = sort.split(":");
- const qs = new URLSearchParams({
-  "pagination[page]": String(page),
-  "pagination[pageSize]": String(pageSize),
-  populate: "*",
-  sort: `${sortField}:${sortDir ?? "asc"}`,
-});
+  const qs = new URLSearchParams();
+  qs.set("pagination[page]", String(page));
+  qs.set("pagination[pageSize]", String(pageSize));
+  qs.set("sort", sort);
+  qs.set("populate", "*");
 
-  // 🔎 filtro Strapi para rendimiento
-  if (q) qs.set("filters[name][$containsi]", q);
   if (cat) qs.set("filters[category][slug][$eq]", cat);
 
   const [productsRes, categoriesRes] = await Promise.all([
-    fetch(`${STRAPI_URL}/api/products?${qs}`),
-    fetch(`${STRAPI_URL}/api/categories?pagination[limit]=100&sort=name:asc`),
+    fetch(`${STRAPI_URL}/api/products?${qs.toString()}`),
+    fetch(`${STRAPI_URL}/api/categories?pagination[pageSize]=100&sort=name:asc`),
   ]);
 
   const productsData = await productsRes.json();
@@ -61,47 +60,46 @@ try {
   products = productsData?.data ?? [];
   pageCount = productsData?.meta?.pagination?.pageCount ?? 1;
   total = productsData?.meta?.pagination?.total ?? 0;
-  categories = categoriesData?.data ?? [];
-} catch (e) {
+
+  // normaliza categorías a {name, slug}
+  categories = (categoriesData?.data ?? []).map((c) => c?.attributes ?? c);
+} catch {
   products = [];
   categories = [];
   pageCount = 1;
   total = 0;
 }
 
-// ✅ filtro extra con RegExp (para PDF)
+// filtra por RegExp (sobre lo ya paginado)
 const productsRegexFiltered = re
   ? products.filter((item) => {
       const p = item?.attributes ?? item;
       const haystack = normalize(
-        `${p.name ?? ""} ${p.shortDescription ?? p.short_description ?? ""} ${p.description ?? ""}`
+        `${p.name ?? ""} ${p.shortDescription ?? p.short_description ?? ""} ${JSON.stringify(p.description ?? "")}`
       );
       return re.test(haystack);
     })
   : products;
 
-const hasFilters = !!(q || cat);
-
-const categoryList = categories.map((c) => {
-  const a = c.attributes ?? c;
-  return { name: a.name, slug: a.slug };
-});
-
-const activeCategoryName = cat
-  ? categoryList.find((c) => c.slug === cat)?.name ?? cat
-  : null;
-
+const hasFilters = !!(q || cat || (sort && sort !== "createdAt:desc"));
 const shownCount = productsRegexFiltered.length;
+
+const activeCategoryName =
+  cat ? (categories.find((c) => c.slug === cat)?.name ?? null) : null;
+
+// canonical para SEO
+const canonical = "/productos/";
 ---
 
 <BaseLayout
   title="Productos — ZetaGadget"
   description="Explora nuestro catálogo completo de gadgets y productos tecnológicos."
+  canonical={canonical}
 >
   <main class="container-page py-10">
-    <!-- Header (card) -->
+    <!-- Header -->
     <div
-      class="mb-10 rounded-3xl p-6 sm:p-8"
+      class="mb-8 rounded-3xl p-6 sm:p-8"
       style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
     >
       <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">
@@ -134,16 +132,39 @@ const shownCount = productsRegexFiltered.length;
       )}
     </div>
 
-    <!-- Toolbar (panel) -->
-    <div
-      class="mb-7 rounded-3xl p-4 sm:p-5"
-      style="background:#151a22; border: 1px solid rgba(255,255,255,0.08);"
-    >
-      <ProductsToolbar client:load categories={categoryList} initial={{ q, category: cat, sort }} />
+    <!-- Filtros (cliente) -->
+    <div class="mb-6 flex gap-3 flex-col sm:flex-row">
+      <input
+        data-filter-q
+        value={q}
+        placeholder="Buscar producto..."
+        class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
+      />
+
+      <select
+        data-filter-cat
+        class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
+      >
+        <option value="">Todas las categorías</option>
+        {categories.map((c) => (
+          <option value={c.slug} selected={cat === c.slug}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+
+      <select
+        data-filter-sort
+        class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
+      >
+        <option value="createdAt:desc" selected={sort === "createdAt:desc"}>Más recientes</option>
+        <option value="price:asc" selected={sort === "price:asc"}>Precio ↑</option>
+        <option value="price:desc" selected={sort === "price:desc"}>Precio ↓</option>
+      </select>
     </div>
 
-    <!-- Filtros activos / resumen (bar) -->
-    {(hasFilters || total > 0) && (
+    <!-- Chips resumen -->
+    {(q || activeCategoryName) && (
       <div
         class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
         style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
@@ -154,10 +175,6 @@ const shownCount = productsRegexFiltered.length;
               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
               style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                <circle cx="4.5" cy="4.5" r="3.5" stroke="currentColor" stroke-width="1.2" />
-                <path d="M7 7l1.5 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-              </svg>
               "{q}"
             </span>
           )}
@@ -167,136 +184,108 @@ const shownCount = productsRegexFiltered.length;
               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
               style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
             >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                <rect x="1" y="1" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.7" />
-                <rect x="5.5" y="1" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.4" />
-                <rect x="1" y="5.5" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.4" />
-                <rect x="5.5" y="5.5" width="3.5" height="3.5" rx="0.8" fill="currentColor" opacity="0.7" />
-              </svg>
               {activeCategoryName}
-            </span>
-          )}
-
-          {hasFilters && (
-            <span class="text-xs" style="color: rgba(229,229,229,0.40);">
-              Tip: prueba otra búsqueda si no encuentras resultados.
             </span>
           )}
         </div>
 
-        {hasFilters && (
-          <a
-            href="/productos"
-            class="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors duration-200"
-            style="color: rgba(229,229,229,0.55);"
-            onmouseover="this.style.color='#e5e5e5';"
-            onmouseout="this.style.color='rgba(229,229,229,0.55)';"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-            </svg>
-            Limpiar filtros
-          </a>
-        )}
+        <a
+          href="/productos/"
+          class="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors duration-200"
+          style="color: rgba(229,229,229,0.55);"
+        >
+          Limpiar filtros
+        </a>
       </div>
     )}
 
     <!-- Grid productos -->
-{productsRegexFiltered.length > 0 ? (
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    {productsRegexFiltered.map((item) => {
-      const p = item.attributes ?? item;
-      const catObj = p.category?.data?.attributes ?? p.category ?? null;
+    {productsRegexFiltered.length > 0 ? (
+      <div
+        data-products-root
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      >
+        {productsRegexFiltered.map((item) => {
+          const p = item?.attributes ?? item;
 
-      // ✅ Tu modelo es "images" (multiple). Cogemos la primera.
-      const firstImg = p.images?.data?.[0]?.attributes?.url ?? null;
+          const firstImg =
+  p.images?.[0]?.formats?.small?.url ??
+  p.images?.[0]?.formats?.thumbnail?.url ??
+  p.images?.[0]?.url ??
+  null;
 
-      // ✅ Strapi devuelve /uploads/... => lo convertimos a URL completa
-      const imageUrl = firstImg
-        ? (firstImg.startsWith("http") ? firstImg : `${STRAPI_URL}${firstImg}`)
-        : null;
+const imageUrl = firstImg ? absoluteUrl(firstImg) : null;
 
-      return (
-        <ProductCard
-          product={{
-            id: item.id ?? p.slug,
-            name: p.name,
-            slug: p.slug,
-            price: p.price,
-            shortDescription: p.shortDescription ?? p.short_description,
-            imageUrl,
-            featured: p.featured ?? false,
-            stock: p.stock ?? 0,
-            category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
-          }}
-        />
-      );
-    })}
-  </div>
-) : (
-      <!-- Empty state -->
+          // category es objeto plano (según curl)
+          const catObj = p.category ?? null;
+
+          return (
+            <ProductCard
+              product={{
+                id: item.id ?? p.slug,
+                name: p.name,
+                slug: p.slug,
+                price: p.price,
+                shortDescription: p.shortDescription ?? p.short_description,
+                imageUrl,
+                featured: p.featured ?? false,
+                stock: p.stock ?? 0,
+                category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
+              }}
+            />
+          );
+        })}
+      </div>
+    ) : (
       <div
         class="relative flex flex-col items-center text-center py-20 px-6 rounded-3xl overflow-hidden"
         style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
       >
-        <div aria-hidden="true" class="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div
-            class="w-80 h-48 rounded-full"
-            style="background: radial-gradient(ellipse, rgba(30,136,229,0.07) 0%, transparent 70%); filter: blur(32px);"
-          ></div>
-        </div>
-
-        <div
-          class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5 z-10"
-          style="background: rgba(30,136,229,0.08); border: 1px solid rgba(30,136,229,0.15);"
-        >
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
-            <circle cx="12" cy="12" r="8" stroke="rgba(30,136,229,0.6)" stroke-width="1.6" />
-            <path d="M18 18l5 5" stroke="rgba(30,136,229,0.6)" stroke-width="1.6" stroke-linecap="round" />
-            <path d="M9 12h6M12 9v6" stroke="rgba(229,229,229,0.3)" stroke-width="1.4" stroke-linecap="round" />
-          </svg>
-        </div>
-
-        <h2 class="text-xl font-semibold mb-2 z-10" style="color: #e5e5e5;">
+        <h2 class="text-xl font-semibold mb-2" style="color: #e5e5e5;">
           {hasFilters ? "Sin resultados para tu búsqueda" : "No hay productos disponibles"}
         </h2>
-        <p class="text-sm max-w-sm mb-7 z-10" style="color: rgba(229,229,229,0.45);">
+        <p class="text-sm max-w-sm mb-7" style="color: rgba(229,229,229,0.45);">
           {hasFilters
             ? "Prueba con otros términos, cambia la categoría o elimina los filtros activos."
             : "Vuelve pronto, estamos añadiendo nuevos productos constantemente."}
         </p>
 
         {hasFilters && (
-          <div class="flex flex-wrap items-center justify-center gap-3 z-10">
-            <a
-              href="/productos"
-              class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-              style="background: #1e88e5; color: #fff; box-shadow: 0 4px 16px rgba(30,136,229,0.2);"
-              onmouseover="this.style.background='#3aa0ff';"
-              onmouseout="this.style.background='#1e88e5';"
-            >
-              Limpiar filtros
-            </a>
-
-            <a
-              href="/categorias"
-              class="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-              style="background: rgba(255,255,255,0.04); color: rgba(229,229,229,0.7); border: 1px solid rgba(255,255,255,0.09);"
-              onmouseover="this.style.color='#e5e5e5'; this.style.borderColor='rgba(255,255,255,0.18)';"
-              onmouseout="this.style.color='rgba(229,229,229,0.7)'; this.style.borderColor='rgba(255,255,255,0.09)';"
-            >
-              Ver categorías
-            </a>
-          </div>
+          <a
+            href="/productos/"
+            class="px-5 py-2.5 rounded-xl text-sm font-semibold"
+            style="background: #1e88e5; color: #fff;"
+          >
+            Limpiar filtros
+          </a>
         )}
       </div>
     )}
 
-    <!-- Paginación -->
+    <!-- Paginación simple (sin componente) -->
     {pageCount > 1 && (
-      <div class="mt-12 flex justify-center">
-        <Pagination pagination={{ page, pageCount }} />
-      </div>
+      <nav class="mt-12 flex justify-center gap-3 text-sm">
+        {page > 1 && (
+          <a
+            href={`/productos/?page=${page - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}${cat ? `&cat=${encodeURIComponent(cat)}` : ""}${sort ? `&sort=${encodeURIComponent(sort)}` : ""}`}
+            class="px-4 py-2 rounded-xl border border-white/10 bg-white/5"
+          >
+            ← Anterior
+          </a>
+        )}
+
+        {page < pageCount && (
+          <a
+            href={`/productos/?page=${page + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}${cat ? `&cat=${encodeURIComponent(cat)}` : ""}${sort ? `&sort=${encodeURIComponent(sort)}` : ""}`}
+            class="px-4 py-2 rounded-xl border border-white/10 bg-white/5"
+          >
+            Siguiente →
+          </a>
+        )}
+      </nav>
     )}
   </main>
+
+  <!-- Script que actualiza querystring y recarga -->
+  <script type="module" src="/scripts/products-filter.js"></script>
 </BaseLayout>

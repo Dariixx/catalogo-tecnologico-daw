@@ -1,0 +1,18 @@
+---
+const items = [
+  { title: "Selección curada", desc: "Menos ruido, mejores opciones." },
+  { title: "Guías de compra", desc: "Decisiones rápidas y con contexto." },
+  { title: "Actualizado", desc: "Nuevos productos y comparativas." },
+  { title: "Transparencia", desc: "Explicamos por qué recomendamos." },
+];
+---
+<section class="mb-10">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    {items.map((it) => (
+      <div class="rounded-2xl p-4" style="background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+        <p class="text-sm font-semibold" style="color:#e5e5e5;">{it.title}</p>
+        <p class="mt-1 text-xs" style="color:rgba(229,229,229,0.55);">{it.desc}</p>
+      </div>
+    ))}
+  </div>
+</section>
