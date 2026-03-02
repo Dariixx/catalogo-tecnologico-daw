@@ -4,6 +4,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { STRAPI_URL } from "../../lib/urls.js";
 
+
 const url = new URL(Astro.request.url);
 const q = url.searchParams.get("q")?.trim() ?? "";
 const cat = url.searchParams.get("cat")?.trim() ?? "";
@@ -286,6 +287,7 @@ const imageUrl = firstImg ? absoluteUrl(firstImg) : null;
     )}
   </main>
 
-  <!-- Script que actualiza querystring y recarga -->
-  <script type="module" src="/scripts/products-filter.js"></script>
+
+  
+ 
 </BaseLayout>

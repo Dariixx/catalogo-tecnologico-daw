@@ -7,6 +7,8 @@ import CartDrawer from "../components/CartDrawer.astro";
 import { site } from "../config/site";
 import { getSiteSettings } from "../lib/site-settings.js";
 import { STRAPI_URL } from "../lib/urls.js";
+import "../lib/cart.js";
+
 
 const {
   title = site.defaultTitle || site.name,
@@ -78,48 +80,179 @@ const brand = {
     </main>
 
     <Footer brand={brand} />
+    <script type="module" src="/scripts/cart-init.js"></script>
+
     <CartDrawer />
 
     <!-- Progress bar navegación -->
-    <script>
-      const loading = document.getElementById("route-loading");
-      const bar = document.getElementById("route-loading-bar");
+    <script type="module">
+  const api = window.ZG_CART;
 
-      const start = () => {
-        if (!loading || !bar) return;
-        loading.style.opacity = "1";
-        bar.style.width = "20%";
-        bar.style.transition = "width 200ms ease";
-        setTimeout(() => (bar.style.width = "55%"), 180);
-        setTimeout(() => (bar.style.width = "80%"), 420);
-      };
+  if (!api) {
+    console.error("ZG_CART no cargado. Asegúrate de incluir /scripts/cart-init.js antes del CartDrawer.");
+  } else {
+    const { getCart, addToCart, setQty, removeFromCart, countItems } = api;
 
-      const done = () => {
-        if (!loading || !bar) return;
-        bar.style.width = "100%";
-        bar.style.transition = "width 180ms ease";
-        setTimeout(() => {
-          loading.style.opacity = "0";
-          bar.style.width = "0%";
-          bar.style.transition = "none";
-        }, 220);
-      };
+    const drawer = document.getElementById("zgCartDrawer");
+    const overlay = document.getElementById("zgCartOverlay");
+    const closeBtn = document.getElementById("zgCartClose");
+    const body = document.getElementById("zgCartBody");
+    const totalEl = document.getElementById("zgCartTotal");
+    const badge = document.getElementById("cartBadge");
 
-      document.addEventListener("click", (e) => {
-        const a = e.target?.closest?.("a");
-        if (!a) return;
+    const euro = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 
-        const href = a.getAttribute("href");
-        if (!href) return;
+    function render() {
+      const items = getCart();
 
-        if (href.startsWith("#")) return;
-        if (a.target === "_blank") return;
-        if (href.startsWith("http")) return;
+      // badge
+      if (badge) {
+        const n = countItems(items);
+        badge.textContent = String(n);
+        badge.classList.toggle("hidden", n <= 0);
+      }
 
-        start();
-      });
+      if (!body || !totalEl) return;
 
-      window.addEventListener("pageshow", done);
-    </script>
+      if (!items.length) {
+        body.innerHTML = '<div style="opacity:.65">Tu carrito está vacío.</div>';
+        totalEl.textContent = euro.format(0);
+        return;
+      }
+
+      let total = 0;
+
+      body.innerHTML = items
+        .map((it) => {
+          const id = String(it.id ?? it.slug ?? "");
+          const price = Number(it.price) || 0;
+          const q = Math.max(1, Number(it.qty) || 1);
+          total += price * q;
+
+          return `
+            <div style="border:1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); border-radius: 14px; padding: 12px;">
+              <div style="display:flex; justify-content:space-between; gap:12px;">
+                <div style="min-width:0;">
+                  <div style="font-weight:600; color:#e5e5e5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    ${it.name || "Producto"}
+                  </div>
+                  <div style="opacity:.6; font-size: 12px; margin-top:2px;">
+                    ${euro.format(price)}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  data-remove-id="${id}"
+                  style="opacity:.8; border:1px solid rgba(255,255,255,0.10); background:transparent; color:#e5e5e5; border-radius:10px; padding:6px 10px;"
+                >
+                  Quitar
+                </button>
+              </div>
+
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <button
+                    type="button"
+                    data-dec-id="${id}"
+                    style="width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;"
+                  >−</button>
+
+                  <strong style="min-width:22px; text-align:center;">${q}</strong>
+
+                  <button
+                    type="button"
+                    data-inc-id="${id}"
+                    style="width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;"
+                  >+</button>
+                </div>
+
+                <strong style="color:#e5e5e5;">${euro.format(price * q)}</strong>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      totalEl.textContent = euro.format(total);
+    }
+
+    function openCart() {
+      overlay?.classList.remove("hidden");
+      drawer?.classList.remove("translate-x-full");
+      render();
+    }
+
+    function closeCart() {
+      drawer?.classList.add("translate-x-full");
+      overlay?.classList.add("hidden");
+    }
+
+    document.addEventListener("click", (e) => {
+      const t = e.target instanceof Element ? e.target : null;
+      if (!t) return;
+
+      // Abrir carrito
+      if (t.closest("[data-open-cart], [data-cart-button]")) {
+        e.preventDefault();
+        openCart();
+        return;
+      }
+
+      // Añadir
+      const addBtn = t.closest("[data-add-to-cart]");
+      if (addBtn) {
+        e.preventDefault();
+        addToCart({
+          id: addBtn.getAttribute("data-id") || addBtn.getAttribute("data-slug") || "",
+          name: addBtn.getAttribute("data-name") || "Producto",
+          price: Number(addBtn.getAttribute("data-price") || 0),
+          slug: addBtn.getAttribute("data-slug") || "",
+          qty: 1,
+        });
+        openCart();
+        return;
+      }
+
+      // Quitar
+      const rm = t.closest("[data-remove-id]");
+      if (rm) {
+        removeFromCart(rm.getAttribute("data-remove-id"));
+        render();
+        return;
+      }
+
+      // +
+      const inc = t.closest("[data-inc-id]");
+      if (inc) {
+        const id = inc.getAttribute("data-inc-id");
+        const current = getCart().find((it) => String(it.id) === String(id));
+        const q = Number(current?.qty) || 1;
+        setQty(id, q + 1);
+        render();
+        return;
+      }
+
+      // -
+      const dec = t.closest("[data-dec-id]");
+      if (dec) {
+        const id = dec.getAttribute("data-dec-id");
+        const current = getCart().find((it) => String(it.id) === String(id));
+        const q = Number(current?.qty) || 1;
+        setQty(id, q - 1);
+        render();
+        return;
+      }
+    });
+
+    overlay?.addEventListener("click", closeCart);
+    closeBtn?.addEventListener("click", closeCart);
+
+    window.addEventListener("cart:updated", render);
+    window.addEventListener("storage", render);
+
+    render();
+  }
+</script>
   </body>
 </html>

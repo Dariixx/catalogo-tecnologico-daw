@@ -1,6 +1,4 @@
----
-import { readCart, addToCart, incQty, removeFromCart } from "../lib/cart.js";
----
+
 
 <!-- Overlay -->
 <div id="zgCartOverlay" class="fixed inset-0 z-[90] hidden" style="background: rgba(0,0,0,.55);"></div>
@@ -37,8 +35,13 @@ import { readCart, addToCart, incQty, removeFromCart } from "../lib/cart.js";
 </aside>
 
 <script type="module">
-  
+ const api = window.ZG_CART;
+if (!api) {
+  console.error("ZG_CART no cargado");
+  return;
+}
 
+const { getCart, addToCart, setQty, removeFromCart, countItems } = api;
   const drawer = document.getElementById("zgCartDrawer");
   const overlay = document.getElementById("zgCartOverlay");
   const closeBtn = document.getElementById("zgCartClose");
@@ -49,11 +52,11 @@ import { readCart, addToCart, incQty, removeFromCart } from "../lib/cart.js";
   const euro = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 
   function render() {
-    const items = readCart();
+    const items = getCart();
 
     // badge
     if (badge) {
-      const n = items.reduce((a, it) => a + (Number(it.qty) || 1), 0);
+     const n = countItems(items);
       badge.textContent = String(n);
       badge.classList.toggle("hidden", n <= 0);
     }
@@ -97,17 +100,13 @@ import { readCart, addToCart, incQty, removeFromCart } from "../lib/cart.js";
 
           <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
             <div style="display:flex; align-items:center; gap:10px;">
-              <button
-                type="button"
-                data-dec-id="${id}"
+              <button type="button" data-dec-id="${id}"
                 style="width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;"
               >−</button>
 
               <strong style="min-width:22px; text-align:center;">${q}</strong>
 
-              <button
-                type="button"
-                data-inc-id="${id}"
+              <button type="button" data-inc-id="${id}"
                 style="width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;"
               >+</button>
             </div>
@@ -132,10 +131,7 @@ import { readCart, addToCart, incQty, removeFromCart } from "../lib/cart.js";
     overlay?.classList.add("hidden");
   }
 
-  window.openCart = openCart;
-  window.closeCart = closeCart;
-
-  // Listener único: abrir + acciones + añadir global
+  // Listener único global (abre carrito + añade + acciones)
   document.addEventListener("click", (e) => {
     const t = e.target instanceof Element ? e.target : null;
     if (!t) return;
@@ -147,7 +143,7 @@ import { readCart, addToCart, incQty, removeFromCart } from "../lib/cart.js";
       return;
     }
 
-    // Añadir (cualquier botón del sitio)
+    // Añadir
     const addBtn = t.closest("[data-add-to-cart]");
     if (addBtn) {
       e.preventDefault();
@@ -173,18 +169,24 @@ import { readCart, addToCart, incQty, removeFromCart } from "../lib/cart.js";
     }
 
     const inc = t.closest("[data-inc-id]");
-    if (inc) {
-      incQty(inc.getAttribute("data-inc-id"), 1);
-      render();
-      return;
-    }
+if (inc) {
+  const id = inc.getAttribute("data-inc-id");
+  const current = getCart().find(it => String(it.id) === String(id));
+  const q = Number(current?.qty) || 1;
+  setQty(id, q + 1);
+  render();
+  return;
+}
 
-    const dec = t.closest("[data-dec-id]");
-    if (dec) {
-      incQty(dec.getAttribute("data-dec-id"), -1);
-      render();
-      return;
-    }
+const dec = t.closest("[data-dec-id]");
+if (dec) {
+  const id = dec.getAttribute("data-dec-id");
+  const current = getCart().find(it => String(it.id) === String(id));
+  const q = Number(current?.qty) || 1;
+  setQty(id, q - 1); // tu setQty ya elimina si baja a 0
+  render();
+  return;
+}
   });
 
   overlay?.addEventListener("click", closeCart);
