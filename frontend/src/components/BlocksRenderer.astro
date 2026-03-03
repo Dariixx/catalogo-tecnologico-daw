@@ -1,66 +1,138 @@
 ---
 const { blocks = [] } = Astro.props;
 
-function textFrom(children) {
-  if (!children) return "";
-  if (typeof children === "string") return children;
-  if (Array.isArray(children)) return children.map(textFrom).join("");
-  if (children.text) return children.text;
-  if (children.children) return children.children.map(textFrom).join("");
+const esc = (s = "") =>
+  String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+function joinText(arr) {
+  return arr.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+function textFrom(node) {
+  if (!node) return "";
+  if (typeof node === "string") return node;
+  if (Array.isArray(node)) return joinText(node.map(textFrom));
+  if (node.text) return node.text;
+  if (node.children) return joinText(node.children.map(textFrom));
   return "";
+}
+
+// Inline HTML: bold/italic/underline/code + links
+function renderInlineHtml(children) {
+  if (!Array.isArray(children)) return esc(textFrom(children));
+
+  return children
+    .map((ch) => {
+      if (!ch) return "";
+
+      // link { type:"link", url, children }
+      if (ch.type === "link" && ch.url) {
+        const url = esc(ch.url);
+        const isHttp = /^https?:\/\//i.test(ch.url);
+        const rel = isHttp ? ' rel="noopener noreferrer"' : "";
+        const target = isHttp ? ' target="_blank"' : "";
+        return `<a href="${url}" class="text-blue-400 underline underline-offset-4 hover:text-blue-300"${rel}${target}>${renderInlineHtml(
+          ch.children
+        )}</a>`;
+      }
+
+      const raw = ch.text ?? textFrom(ch);
+      if (!raw) return "";
+
+      let out = esc(raw);
+
+      if (ch.code) out = `<code class="px-1 py-0.5 rounded bg-blue-500/10 text-blue-300">${out}</code>`;
+      if (ch.underline) out = `<span class="underline underline-offset-4">${out}</span>`;
+      if (ch.italic) out = `<em>${out}</em>`;
+      if (ch.bold) out = `<strong class="text-white font-semibold">${out}</strong>`;
+
+      return `<span>${out}</span>`;
+    })
+    .join("");
+}
+
+function isEmptyParagraph(b) {
+  return !textFrom(b?.children).trim();
+}
+
+function renderBlockHtml(b) {
+  const type = b?.type;
+
+  // heading
+  if (type === "heading") {
+    const level = Number(b?.level || 2);
+    const tag = `h${Math.min(4, Math.max(2, level))}`;
+
+    const cls =
+      tag === "h2"
+        ? "mt-10 mb-4 text-2xl font-extrabold text-white"
+        : tag === "h3"
+          ? "mt-8 mb-3 text-xl font-bold text-white"
+          : "mt-6 mb-2 text-lg font-bold text-white";
+
+    return `<${tag} class="${cls}">${renderInlineHtml(b.children)}</${tag}>`;
+  }
+
+  // paragraph
+  if (type === "paragraph") {
+    if (isEmptyParagraph(b)) return "";
+    return `<p class="mb-5 text-[0.98rem] leading-[1.9] text-gray-300">${renderInlineHtml(
+      b.children
+    )}</p>`;
+  }
+
+  // quote
+  if (type === "quote" || type === "blockquote") {
+    const t = textFrom(b?.children).trim();
+    if (!t) return "";
+    return `<blockquote class="my-7 border-l-4 border-blue-500/60 bg-blue-500/5 px-5 py-4 rounded-r-2xl text-gray-200 italic leading-relaxed">${renderInlineHtml(
+      b.children
+    )}</blockquote>`;
+  }
+
+  // code block
+  if (type === "code" || type === "code-block") {
+    const code = (b?.code || textFrom(b?.children)).trim();
+    if (!code) return "";
+    return `<pre class="my-7 overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-5 text-sm leading-relaxed text-gray-200"><code>${esc(
+      code
+    )}</code></pre>`;
+  }
+
+  // list
+  if (type === "list") {
+    const ordered = b?.format === "ordered";
+    const items = (b?.children || [])
+      .map((li) => {
+        const inner = li?.children ?? li;
+        return esc(textFrom(inner).trim());
+      })
+      .filter(Boolean);
+
+    if (!items.length) return "";
+
+    const tag = ordered ? "ol" : "ul";
+    const cls = ordered
+      ? "list-decimal pl-6 text-gray-300 space-y-2 mb-6"
+      : "list-disc pl-6 text-gray-300 space-y-2 mb-6";
+
+    return `<${tag} class="${cls}">${items
+      .map((t) => `<li class="leading-relaxed">${t}</li>`)
+      .join("")}</${tag}>`;
+  }
+
+  // fallback
+  const t = textFrom(b?.children ?? b).trim();
+  if (!t) return "";
+  return `<p class="mb-5 text-[0.98rem] leading-[1.9] text-gray-300">${esc(t)}</p>`;
 }
 ---
 
-{Array.isArray(blocks) && blocks.map((b) => {
-  const type = b?.type;
-
-  if (type === "heading") {
-    const level = Number(b?.level || 2);
-    const Tag = (`h${Math.min(4, Math.max(2, level))}`) as any;
-    return <Tag class="mt-6 mb-2 font-semibold text-white">{textFrom(b.children)}</Tag>;
-  }
-
-  if (type === "paragraph") {
-    const t = textFrom(b.children).trim();
-    if (!t) return null;
-    return <p class="mb-4 text-gray-300 leading-relaxed">{t}</p>;
-  }
-
-  if (type === "list") {
-    const ordered = b?.format === "ordered";
-    const items = (b?.children || []).map((li) => textFrom(li?.children || li)).filter(Boolean);
-    if (!items.length) return null;
-
-    return ordered ? (
-      <ol class="list-decimal pl-6 text-gray-300 space-y-1 mb-4">
-        {items.map((t) => <li>{t}</li>)}
-      </ol>
-    ) : (
-      <ul class="list-disc pl-6 text-gray-300 space-y-1 mb-4">
-        {items.map((t) => <li>{t}</li>)}
-      </ul>
-    );
-  }
-
-  if (type === "quote") {
-    const t = textFrom(b.children).trim();
-    if (!t) return null;
-    return (
-      <blockquote class="my-6 border-l-4 border-blue-500/60 bg-blue-500/5 px-4 py-3 rounded-r-xl text-gray-200 italic">
-        {t}
-      </blockquote>
-    );
-  }
-
-  if (type === "code") {
-    const code = (b?.code || textFrom(b.children)).trim();
-    if (!code) return null;
-    return (
-      <pre class="my-6 overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-gray-200">
-        <code>{code}</code>
-      </pre>
-    );
-  }
-
-  return null;
-})}
+{Array.isArray(blocks) && blocks.map((b) => (
+  <div class="contents" set:html={renderBlockHtml(b)} />
+))}

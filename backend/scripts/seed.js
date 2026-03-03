@@ -16,11 +16,7 @@ function fileExists(p) {
   return fs.existsSync(p);
 }
 
-/**
- * ✅ Strapi Blocks required:
- * Si description es type: "blocks" y required: true, nunca puede ser '' ni []
- * Esto crea un bloque mínimo válido.
- */
+
 function normalizeBlocksDescription(desc, fallbackText) {
   if (Array.isArray(desc) && desc.length > 0) return desc;
 
@@ -34,22 +30,22 @@ function normalizeBlocksDescription(desc, fallbackText) {
   ];
 }
 function toStrapiInline(child) {
-  // Si ya viene en formato Strapi (type:text)
+
   if (child && typeof child === 'object' && child.type === 'text') return child;
 
-  // Tu formato actual: { text: "..." }
+
   if (child && typeof child === 'object' && typeof child.text === 'string') {
     return { type: 'text', text: child.text };
   }
 
-  // Si viene un string suelto
+ 
   if (typeof child === 'string') return { type: 'text', text: child };
 
   return { type: 'text', text: '' };
 }
 
 function slateBlocksToStrapiBlocks(blocks, fallbackText) {
-  // Si no hay blocks -> bloque mínimo
+
   if (!Array.isArray(blocks) || blocks.length === 0) {
     return [
       {
@@ -61,14 +57,14 @@ function slateBlocksToStrapiBlocks(blocks, fallbackText) {
 
   return blocks
     .map((b) => {
-      // heading -> Strapi espera type: "heading" y level
+     
       if (b?.type === 'heading') {
         const level = Math.min(Math.max(Number(b.level) || 2, 1), 6);
         const children = Array.isArray(b.children) ? b.children.map(toStrapiInline) : [];
         return { type: 'heading', level, children: children.length ? children : [{ type: 'text', text: '' }] };
       }
 
-      // paragraph (o cualquier otro -> paragraph)
+     
       const children = Array.isArray(b?.children) ? b.children.map(toStrapiInline) : [];
       return { type: 'paragraph', children: children.length ? children : [{ type: 'text', text: '' }] };
     })
@@ -114,17 +110,12 @@ async function uploadIfNeeded(relativeAssetPath) {
   return file || null;
 }
 
-/**
- * En Strapi v5, para Draft&Publish lo más fiable es:
- * - create/update
- * - publish(documentId)
- */
+
 async function ensurePublished(uid, documentId) {
   if (!documentId) return;
   try {
     await strapi.documents(uid).publish({ documentId });
   } catch (e) {
-    // Si ya estaba publicado o el CT no tiene draft&publish, no pasa nada.
   }
 }
 
@@ -265,7 +256,7 @@ async function importProducts(categoryMap) {
       name: p.name,
       slug: p.slug,
       shortDescription: p.shortDescription ?? '',
-      // ✅ CLAVE: description es blocks requerido
+      
       description: slateBlocksToStrapiBlocks(p.description, p.shortDescription || p.name),
       price: p.price ?? 0,
       brand: p.brand ?? '',

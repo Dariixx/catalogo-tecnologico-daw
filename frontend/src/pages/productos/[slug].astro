@@ -24,30 +24,60 @@ const { slug } = Astro.params;
 const productRes = await strapiFetch(
   `/products?filters[slug][$eq]=${encodeURIComponent(slug)}&populate=*`
 );
-
 const products = unwrapCollection(productRes);
 const p = products[0];
 if (!p) throw new Error(`Producto no encontrado para slug: ${slug}`);
 
 const canonical = `/productos/${slug}/`;
 
-// ✅ Tu API usa "images" (array), no "image"
-const images = Array.isArray(p?.images) ? p.images : [];
-const mainImage = images[0]?.url ? absoluteUrl(images[0].url) : null;
+// ---- helpers imágenes (soporta media v4 / componente / array plano)
+const normalizeImages = (images) => {
+  // media v4
+  if (Array.isArray(images?.data)) return images.data.map((x) => x?.attributes).filter(Boolean);
 
-const thumbUrl = (img) =>
-  absoluteUrl(img?.formats?.thumbnail?.url || img?.formats?.small?.url || img?.url);
+  // array directo
+  if (Array.isArray(images)) {
+    return images
+      .map((x) => x?.image?.data?.attributes ?? x?.image ?? x?.attributes ?? x)
+      .filter(Boolean);
+  }
 
-const gallery = images.map((img) => ({
-  url: absoluteUrl(img?.url),
-  thumb: thumbUrl(img),
-  alt: img?.alternativeText || p?.name || "Imagen producto",
+  return [];
+};
+
+const pickUrl = (img) =>
+  img?.formats?.large?.url ??
+  img?.formats?.medium?.url ??
+  img?.formats?.small?.url ??
+  img?.formats?.thumbnail?.url ??
+  img?.url ??
+  null;
+
+const imgs = normalizeImages(p?.images);
+
+const mainImage = imgs[0] ? absoluteUrl(pickUrl(imgs[0])) : null;
+
+const gallery = imgs.map((img) => {
+  const fullRel = pickUrl(img);
+  const thumbRel = img?.formats?.thumbnail?.url ?? img?.formats?.small?.url ?? fullRel;
+
+  return {
+    url: fullRel ? absoluteUrl(fullRel) : null,
+    thumb: thumbRel ? absoluteUrl(thumbRel) : null,
+    alt: img?.alternativeText || p?.name || "Imagen producto",
+  };
+}).filter((g) => g.url);
+
+const thumbs = gallery.map((g) => ({
+  url: g.thumb || g.url,
+  full: g.url,
+  alt: g.alt,
 }));
 
-const category = p?.category ?? null;
-const cat = category;
+const cat = p?.category ?? null;
 
-const featured = Boolean(p?.featured);
+// featured: solo si existe con algún nombre (no rompe)
+const featured = Boolean(p?.featured ?? p?.isFeatured ?? p?.destacado ?? false);
 
 const priceNumber = Number(p?.price ?? 0);
 const formattedPrice = new Intl.NumberFormat("es-ES", {
@@ -61,15 +91,9 @@ const inStock = stock > 0;
 
 const specs = Array.isArray(p?.specifications) ? p.specifications : [];
 
-// Strapi: description viene como blocks (array) en tu modelo
+// descripción larga: puede venir como blocks (array) o como string HTML
 const longDescriptionBlocks = Array.isArray(p?.description) ? p.description : null;
-
-// Thumbs para UI (usa thumb si existe; si no, la imagen normal)
-const thumbs = gallery.map((g) => ({
-  url: g.thumb || g.url,
-  full: g.url,
-  alt: g.alt,
-}));
+const longDescriptionHtml = typeof p?.description === "string" ? p.description : null;
 
 const title = p?.name || "Producto";
 const description = p?.shortDescription || "Producto en ZetaGadget";

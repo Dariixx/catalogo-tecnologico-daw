@@ -1,40 +1,22 @@
 ---
+
+
+
 import { absoluteUrl } from "../../lib/strapi.js";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { STRAPI_URL } from "../../lib/urls.js";
 
-
 const url = new URL(Astro.request.url);
+
 const q = url.searchParams.get("q")?.trim() ?? "";
 const cat = url.searchParams.get("cat")?.trim() ?? "";
 const sort = url.searchParams.get("sort")?.trim() ?? "createdAt:desc";
+const min = url.searchParams.get("min")?.trim() ?? "";
+const max = url.searchParams.get("max")?.trim() ?? "";
 const page = Number(url.searchParams.get("page") ?? "1") || 1;
+
 const pageSize = 24;
-
-// normalizador
-const normalize = (s = "") =>
-  String(s)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-
-// regex opcional (búsqueda robusta)
-let re = null;
-if (q) {
-  try {
-    re = new RegExp(normalize(q), "i");
-  } catch {
-    re = null;
-  }
-}
-
-const abs = (u) => {
-  if (!u) return null;
-  if (/^https?:\/\//i.test(u)) return u;
-  return `${String(STRAPI_URL).replace(/\/$/, "")}${u.startsWith("/") ? "" : "/"}${u}`;
-};
 
 let products = [];
 let categories = [];
@@ -43,12 +25,30 @@ let total = 0;
 
 try {
   const qs = new URLSearchParams();
+
   qs.set("pagination[page]", String(page));
   qs.set("pagination[pageSize]", String(pageSize));
   qs.set("sort", sort);
   qs.set("populate", "*");
 
-  if (cat) qs.set("filters[category][slug][$eq]", cat);
+  // 🔎 búsqueda texto
+  if (q) {
+    qs.set("filters[$or][0][name][$containsi]", q);
+    qs.set("filters[$or][1][shortDescription][$containsi]", q);
+    qs.set("filters[$or][2][short_description][$containsi]", q);
+  }
+
+  // 📂 categoría
+  if (cat) {
+    qs.set("filters[category][slug][$eq]", cat);
+  }
+
+  // 💰 precio mínimo / máximo
+  const minN = Number(min);
+  const maxN = Number(max);
+
+  if (min && Number.isFinite(minN)) qs.set("filters[price][$gte]", String(minN));
+  if (max && Number.isFinite(maxN)) qs.set("filters[price][$lte]", String(maxN));
 
   const [productsRes, categoriesRes] = await Promise.all([
     fetch(`${STRAPI_URL}/api/products?${qs.toString()}`),
@@ -62,7 +62,6 @@ try {
   pageCount = productsData?.meta?.pagination?.pageCount ?? 1;
   total = productsData?.meta?.pagination?.total ?? 0;
 
-  // normaliza categorías a {name, slug}
   categories = (categoriesData?.data ?? []).map((c) => c?.attributes ?? c);
 } catch {
   products = [];
@@ -71,25 +70,21 @@ try {
   total = 0;
 }
 
-// filtra por RegExp (sobre lo ya paginado)
-const productsRegexFiltered = re
-  ? products.filter((item) => {
-      const p = item?.attributes ?? item;
-      const haystack = normalize(
-        `${p.name ?? ""} ${p.shortDescription ?? p.short_description ?? ""} ${JSON.stringify(p.description ?? "")}`
-      );
-      return re.test(haystack);
-    })
-  : products;
-
-const hasFilters = !!(q || cat || (sort && sort !== "createdAt:desc"));
-const shownCount = productsRegexFiltered.length;
+const hasFilters = !!(q || cat || min || max || sort !== "createdAt:desc");
+const shownCount = products.length;
 
 const activeCategoryName =
   cat ? (categories.find((c) => c.slug === cat)?.name ?? null) : null;
 
-// canonical para SEO
 const canonical = "/productos/";
+
+const buildPageUrl = (p) =>
+  `/productos/?page=${p}` +
+  (q ? `&q=${encodeURIComponent(q)}` : "") +
+  (cat ? `&cat=${encodeURIComponent(cat)}` : "") +
+  (sort ? `&sort=${encodeURIComponent(sort)}` : "") +
+  (min ? `&min=${encodeURIComponent(min)}` : "") +
+  (max ? `&max=${encodeURIComponent(max)}` : "");
 ---
 
 <BaseLayout
@@ -133,19 +128,16 @@ const canonical = "/productos/";
       )}
     </div>
 
-    <!-- Filtros (cliente) -->
-    <div class="mb-6 flex gap-3 flex-col sm:flex-row">
+    <!-- Filtros -->
+    <form class="mb-6 flex gap-3 flex-wrap" method="get" action="/productos/">
       <input
-        data-filter-q
+        name="q"
         value={q}
         placeholder="Buscar producto..."
         class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
       />
 
-      <select
-        data-filter-cat
-        class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
-      >
+      <select name="cat" class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
         <option value="">Todas las categorías</option>
         {categories.map((c) => (
           <option value={c.slug} selected={cat === c.slug}>
@@ -154,26 +146,50 @@ const canonical = "/productos/";
         ))}
       </select>
 
-      <select
-        data-filter-sort
-        class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
-      >
+      <select name="sort" class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
         <option value="createdAt:desc" selected={sort === "createdAt:desc"}>Más recientes</option>
+        <option value="name:asc" selected={sort === "name:asc"}>A → Z</option>
+        <option value="name:desc" selected={sort === "name:desc"}>Z → A</option>
         <option value="price:asc" selected={sort === "price:asc"}>Precio ↑</option>
         <option value="price:desc" selected={sort === "price:desc"}>Precio ↓</option>
       </select>
-    </div>
+
+      <input
+        name="min"
+        value={min}
+        inputmode="numeric"
+        placeholder="€ mín"
+        class="w-28 px-4 py-2 rounded-xl bg-white/5 border border-white/10"
+      />
+
+      <input
+        name="max"
+        value={max}
+        inputmode="numeric"
+        placeholder="€ máx"
+        class="w-28 px-4 py-2 rounded-xl bg-white/5 border border-white/10"
+      />
+
+      <button type="submit" class="px-4 py-2 rounded-xl font-semibold bg-blue-600 text-white">
+        Aplicar
+      </button>
+
+      {hasFilters && (
+        <a href="/productos/" class="px-4 py-2 rounded-xl font-semibold bg-white/10 text-white">
+          Limpiar
+        </a>
+      )}
+    </form>
 
     <!-- Chips resumen -->
-    {(q || activeCategoryName) && (
+    {(q || activeCategoryName || min || max) && (
       <div
         class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
         style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
       >
         <div class="flex flex-wrap items-center gap-2">
           {q && (
-            <span
-              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
               style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
             >
               "{q}"
@@ -181,43 +197,42 @@ const canonical = "/productos/";
           )}
 
           {activeCategoryName && (
-            <span
-              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
               style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
             >
               {activeCategoryName}
             </span>
           )}
+
+          {(min || max) && (
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
+            >
+              Precio: {min || "0"}€ — {max || "∞"}€
+            </span>
+          )}
         </div>
 
-        <a
-          href="/productos/"
-          class="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors duration-200"
-          style="color: rgba(229,229,229,0.55);"
-        >
+        <a href="/productos/" class="text-xs font-semibold" style="color: rgba(229,229,229,0.55);">
           Limpiar filtros
         </a>
       </div>
     )}
 
     <!-- Grid productos -->
-    {productsRegexFiltered.length > 0 ? (
-      <div
-        data-products-root
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-      >
-        {productsRegexFiltered.map((item) => {
+    {products.length > 0 ? (
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {products.map((item) => {
           const p = item?.attributes ?? item;
 
           const firstImg =
-  p.images?.[0]?.formats?.small?.url ??
-  p.images?.[0]?.formats?.thumbnail?.url ??
-  p.images?.[0]?.url ??
-  null;
+            p.images?.[0]?.formats?.small?.url ??
+            p.images?.[0]?.formats?.thumbnail?.url ??
+            p.images?.[0]?.url ??
+            null;
 
-const imageUrl = firstImg ? absoluteUrl(firstImg) : null;
+          const imageUrl = firstImg ? absoluteUrl(firstImg) : null;
 
-          // category es objeto plano (según curl)
           const catObj = p.category ?? null;
 
           return (
@@ -247,47 +262,33 @@ const imageUrl = firstImg ? absoluteUrl(firstImg) : null;
         </h2>
         <p class="text-sm max-w-sm mb-7" style="color: rgba(229,229,229,0.45);">
           {hasFilters
-            ? "Prueba con otros términos, cambia la categoría o elimina los filtros activos."
+            ? "Prueba con otros términos, cambia la categoría o ajusta el precio."
             : "Vuelve pronto, estamos añadiendo nuevos productos constantemente."}
         </p>
 
         {hasFilters && (
-          <a
-            href="/productos/"
-            class="px-5 py-2.5 rounded-xl text-sm font-semibold"
-            style="background: #1e88e5; color: #fff;"
-          >
+          <a href="/productos/" class="px-5 py-2.5 rounded-xl text-sm font-semibold" style="background: #1e88e5; color: #fff;">
             Limpiar filtros
           </a>
         )}
       </div>
     )}
 
-    <!-- Paginación simple (sin componente) -->
+    <!-- Paginación -->
     {pageCount > 1 && (
       <nav class="mt-12 flex justify-center gap-3 text-sm">
         {page > 1 && (
-          <a
-            href={`/productos/?page=${page - 1}${q ? `&q=${encodeURIComponent(q)}` : ""}${cat ? `&cat=${encodeURIComponent(cat)}` : ""}${sort ? `&sort=${encodeURIComponent(sort)}` : ""}`}
-            class="px-4 py-2 rounded-xl border border-white/10 bg-white/5"
-          >
+          <a href={buildPageUrl(page - 1)} class="px-4 py-2 rounded-xl border border-white/10 bg-white/5">
             ← Anterior
           </a>
         )}
 
         {page < pageCount && (
-          <a
-            href={`/productos/?page=${page + 1}${q ? `&q=${encodeURIComponent(q)}` : ""}${cat ? `&cat=${encodeURIComponent(cat)}` : ""}${sort ? `&sort=${encodeURIComponent(sort)}` : ""}`}
-            class="px-4 py-2 rounded-xl border border-white/10 bg-white/5"
-          >
+          <a href={buildPageUrl(page + 1)} class="px-4 py-2 rounded-xl border border-white/10 bg-white/5">
             Siguiente →
           </a>
         )}
       </nav>
     )}
   </main>
-
-
-  
- 
 </BaseLayout>
