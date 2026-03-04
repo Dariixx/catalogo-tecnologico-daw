@@ -24,34 +24,44 @@ let pageCount = 1;
 let total = 0;
 
 try {
-  const qs = new URLSearchParams();
+  // ─────────────────────────────────────────────────────────────────────────
+  // IMPORTANTE: URLSearchParams codifica los corchetes como %5B%5D,
+  // lo que rompe los filtros de Strapi. Usamos strings literales en la QS.
+  // ─────────────────────────────────────────────────────────────────────────
+  const params = [];
 
-  qs.set("pagination[page]", String(page));
-  qs.set("pagination[pageSize]", String(pageSize));
-  qs.set("sort", sort);
-  qs.set("populate", "*");
+  params.push(`pagination[page]=${page}`);
+  params.push(`pagination[pageSize]=${pageSize}`);
+  params.push(`sort=${encodeURIComponent(sort)}`);
+
+  // Populate selectivo (mejor rendimiento que populate=*)
+  params.push("populate[images][fields][0]=url");
+  params.push("populate[images][fields][1]=formats");
+  params.push("populate[images][fields][2]=alternativeText");
+  params.push("populate[category][fields][0]=name");
+  params.push("populate[category][fields][1]=slug");
 
   // 🔎 búsqueda texto
   if (q) {
-    qs.set("filters[$or][0][name][$containsi]", q);
-    qs.set("filters[$or][1][shortDescription][$containsi]", q);
-    qs.set("filters[$or][2][short_description][$containsi]", q);
+    params.push(`filters[$or][0][name][$containsi]=${encodeURIComponent(q)}`);
+    params.push(`filters[$or][1][shortDescription][$containsi]=${encodeURIComponent(q)}`);
   }
 
   // 📂 categoría
   if (cat) {
-    qs.set("filters[category][slug][$eq]", cat);
+    params.push(`filters[category][slug][$eq]=${encodeURIComponent(cat)}`);
   }
 
   // 💰 precio mínimo / máximo
   const minN = Number(min);
   const maxN = Number(max);
+  if (min && Number.isFinite(minN)) params.push(`filters[price][$gte]=${minN}`);
+  if (max && Number.isFinite(maxN)) params.push(`filters[price][$lte]=${maxN}`);
 
-  if (min && Number.isFinite(minN)) qs.set("filters[price][$gte]", String(minN));
-  if (max && Number.isFinite(maxN)) qs.set("filters[price][$lte]", String(maxN));
+  const qs = params.join("&");
 
   const [productsRes, categoriesRes] = await Promise.all([
-    fetch(`${STRAPI_URL}/api/products?${qs.toString()}`),
+    fetch(`${STRAPI_URL}/api/products?${qs}`),
     fetch(`${STRAPI_URL}/api/categories?pagination[pageSize]=100&sort=name:asc`),
   ]);
 
@@ -112,8 +122,8 @@ const buildPageUrl = (p) =>
           style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
         >
           {hasFilters
-            ? `${shownCount} resultado${shownCount !== 1 ? "s" : ""}`
-            : `${total} producto${total !== 1 ? "s" : ""}`}
+            ? <><span data-filter-count>{shownCount}</span>{` resultado${shownCount !== 1 ? "s" : ""}`}</>
+            : <><span data-filter-count>{total}</span>{` producto${total !== 1 ? "s" : ""}`}</>}
         </span>
       </div>
 
@@ -132,12 +142,13 @@ const buildPageUrl = (p) =>
     <form class="mb-6 flex gap-3 flex-wrap" method="get" action="/productos/">
       <input
         name="q"
+        data-filter-q
         value={q}
         placeholder="Buscar producto..."
         class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
       />
 
-      <select name="cat" class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+      <select name="cat" data-filter-cat class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
         <option value="">Todas las categorías</option>
         {categories.map((c) => (
           <option value={c.slug} selected={cat === c.slug}>
@@ -146,7 +157,7 @@ const buildPageUrl = (p) =>
         ))}
       </select>
 
-      <select name="sort" class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+      <select name="sort" data-filter-sort class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
         <option value="createdAt:desc" selected={sort === "createdAt:desc"}>Más recientes</option>
         <option value="name:asc" selected={sort === "name:asc"}>A → Z</option>
         <option value="name:desc" selected={sort === "name:desc"}>Z → A</option>
@@ -156,6 +167,7 @@ const buildPageUrl = (p) =>
 
       <input
         name="min"
+        data-filter-min
         value={min}
         inputmode="numeric"
         placeholder="€ mín"
@@ -164,21 +176,13 @@ const buildPageUrl = (p) =>
 
       <input
         name="max"
+        data-filter-max
         value={max}
         inputmode="numeric"
         placeholder="€ máx"
         class="w-28 px-4 py-2 rounded-xl bg-white/5 border border-white/10"
       />
 
-      <button type="submit" class="px-4 py-2 rounded-xl font-semibold bg-blue-600 text-white">
-        Aplicar
-      </button>
-
-      {hasFilters && (
-        <a href="/productos/" class="px-4 py-2 rounded-xl font-semibold bg-white/10 text-white">
-          Limpiar
-        </a>
-      )}
     </form>
 
     <!-- Chips resumen -->
@@ -221,7 +225,7 @@ const buildPageUrl = (p) =>
 
     <!-- Grid productos -->
     {products.length > 0 ? (
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div data-products-grid class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {products.map((item) => {
           const p = item?.attributes ?? item;
 
@@ -254,6 +258,7 @@ const buildPageUrl = (p) =>
       </div>
     ) : (
       <div
+        data-filter-empty
         class="relative flex flex-col items-center text-center py-20 px-6 rounded-3xl overflow-hidden"
         style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
       >
@@ -291,4 +296,5 @@ const buildPageUrl = (p) =>
       </nav>
     )}
   </main>
+  <script src="/scripts/products-filter.js" is:inline></script>
 </BaseLayout>

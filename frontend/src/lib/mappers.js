@@ -2,9 +2,11 @@ import { absoluteUrl } from "./strapi.js";
 
 export function mapProductCard(p) {
     const images = Array.isArray(p?.images) ? p.images : [];
+    // ✅ Priorizar resoluciones más altas para evitar imágenes pixeladas
     const imageUrl =
+      images?.[0]?.formats?.large?.url ||
+      images?.[0]?.formats?.medium?.url ||
       images?.[0]?.formats?.small?.url ||
-      images?.[0]?.formats?.thumbnail?.url ||
       images?.[0]?.url ||
       null;
   
@@ -25,9 +27,11 @@ export function mapProductCard(p) {
 
 export function mapArticleCard(a) {
   // ajusta si tu article tiene cover o images
+  // ✅ Priorizar resoluciones más altas para evitar imágenes pixeladas
   const cover =
+    a?.cover?.formats?.large?.url ||
+    a?.cover?.formats?.medium?.url ||
     a?.cover?.formats?.small?.url ||
-    a?.cover?.formats?.thumbnail?.url ||
     a?.cover?.url ||
     null;
 

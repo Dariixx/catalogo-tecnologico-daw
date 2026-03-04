@@ -1,6 +1,31 @@
 ---
-const { blocks = [] } = Astro.props;
+/**
+ * BlocksRenderer.astro
+ * 
+ * Maneja DOS formatos que puede devolver Strapi:
+ *
+ * 1) Dynamic Zone (__component)  → usado cuando blocks es una Dynamic Zone
+ *    { __component: "shared.rich-text", body: [...] | "<html>" }
+ *    { __component: "shared.quote", title: "...", body: "..." }
+ *    { __component: "shared.media", file: { data: { attributes: { url, formats } } } }
+ *    { __component: "shared.slider", files: [...] }
+ *
+ * 2) Lexical / Block Editor (type) → usado en Strapi v5 o contenido directo
+ *    { type: "paragraph", children: [...] }
+ *    { type: "heading", level: 2, children: [...] }
+ *    { type: "list", format: "ordered"|"unordered", children: [...] }
+ *    { type: "quote", children: [...] }
+ *    { type: "code", children: [...] }
+ */
 
+const { blocks = [], strapiUrl = "" } = Astro.props;
+
+const BASE =
+  strapiUrl ||
+  (typeof import.meta !== "undefined" ? import.meta.env?.PUBLIC_STRAPI_URL : "") ||
+  "https://api.zetagadget.es";
+
+// ── Helpers de escape ────────────────────────────────────────────────────────
 const esc = (s = "") =>
   String(s)
     .replaceAll("&", "&amp;")
@@ -9,130 +34,204 @@ const esc = (s = "") =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 
-function joinText(arr) {
-  return arr.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+function toAbs(url) {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${BASE.replace(/\/$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
-function textFrom(node) {
-  if (!node) return "";
-  if (typeof node === "string") return node;
-  if (Array.isArray(node)) return joinText(node.map(textFrom));
-  if (node.text) return node.text;
-  if (node.children) return joinText(node.children.map(textFrom));
-  return "";
+function pickUrl(media) {
+  const m =
+    media?.data?.attributes ??
+    media?.attributes ??
+    media ??
+    null;
+  if (!m) return "";
+  const rel =
+    m?.formats?.large?.url ??
+    m?.formats?.medium?.url ??
+    m?.formats?.small?.url ??
+    m?.url ??
+    "";
+  return toAbs(rel);
 }
 
-// Inline HTML: bold/italic/underline/code + links
-function renderInlineHtml(children) {
-  if (!Array.isArray(children)) return esc(textFrom(children));
+// ── Inline renderer (Lexical children) ──────────────────────────────────────
+function renderInline(children) {
+  if (!children) return "";
+  if (typeof children === "string") return esc(children);
+  if (!Array.isArray(children)) return esc(String(children.text ?? ""));
 
-  return children
-    .map((ch) => {
-      if (!ch) return "";
-
-      // link { type:"link", url, children }
-      if (ch.type === "link" && ch.url) {
-        const url = esc(ch.url);
-        const isHttp = /^https?:\/\//i.test(ch.url);
-        const rel = isHttp ? ' rel="noopener noreferrer"' : "";
-        const target = isHttp ? ' target="_blank"' : "";
-        return `<a href="${url}" class="text-blue-400 underline underline-offset-4 hover:text-blue-300"${rel}${target}>${renderInlineHtml(
-          ch.children
-        )}</a>`;
-      }
-
-      const raw = ch.text ?? textFrom(ch);
-      if (!raw) return "";
-
-      let out = esc(raw);
-
-      if (ch.code) out = `<code class="px-1 py-0.5 rounded bg-blue-500/10 text-blue-300">${out}</code>`;
-      if (ch.underline) out = `<span class="underline underline-offset-4">${out}</span>`;
-      if (ch.italic) out = `<em>${out}</em>`;
-      if (ch.bold) out = `<strong class="text-white font-semibold">${out}</strong>`;
-
-      return `<span>${out}</span>`;
-    })
-    .join("");
+  return children.map((ch) => {
+    if (!ch) return "";
+    if (ch.type === "link" && ch.url) {
+      const isExt = /^https?:\/\//i.test(ch.url);
+      return `<a href="${esc(ch.url)}"${isExt ? ' target="_blank" rel="noopener noreferrer"' : ""} class="text-blue-400 underline underline-offset-4 hover:text-blue-300 transition-colors">${renderInline(ch.children)}</a>`;
+    }
+    const raw = ch.text ?? "";
+    if (!raw) return "";
+    let out = esc(raw);
+    if (ch.code)      out = `<code class="px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-300 font-mono text-[0.88em]">${out}</code>`;
+    if (ch.underline) out = `<span class="underline underline-offset-4">${out}</span>`;
+    if (ch.italic)    out = `<em class="italic">${out}</em>`;
+    if (ch.bold)      out = `<strong class="font-bold text-white">${out}</strong>`;
+    if (ch.strikethrough) out = `<s class="opacity-60">${out}</s>`;
+    return out;
+  }).join("");
 }
 
-function isEmptyParagraph(b) {
-  return !textFrom(b?.children).trim();
+function hasText(node) {
+  if (!node) return false;
+  if (typeof node === "string") return node.trim().length > 0;
+  if (node.text) return node.text.trim().length > 0;
+  if (Array.isArray(node.children)) return node.children.some(hasText);
+  return false;
 }
 
-function renderBlockHtml(b) {
+// ── Lexical block → HTML ────────────────────────────────────────────────────
+function lexicalToHtml(b) {
   const type = b?.type;
 
-  // heading
   if (type === "heading") {
-    const level = Number(b?.level || 2);
-    const tag = `h${Math.min(4, Math.max(2, level))}`;
-
-    const cls =
-      tag === "h2"
-        ? "mt-10 mb-4 text-2xl font-extrabold text-white"
-        : tag === "h3"
-          ? "mt-8 mb-3 text-xl font-bold text-white"
-          : "mt-6 mb-2 text-lg font-bold text-white";
-
-    return `<${tag} class="${cls}">${renderInlineHtml(b.children)}</${tag}>`;
+    const lvl = Math.min(4, Math.max(2, Number(b.level || 2)));
+    const tag = `h${lvl}`;
+    const cls = {
+      h2: "mt-12 mb-5 text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight",
+      h3: "mt-9 mb-4 text-xl sm:text-2xl font-bold text-white leading-snug",
+      h4: "mt-7 mb-3 text-lg font-bold text-gray-100 leading-snug",
+    }[tag];
+    return `<${tag} class="${cls}">${renderInline(b.children)}</${tag}>`;
   }
 
-  // paragraph
   if (type === "paragraph") {
-    if (isEmptyParagraph(b)) return "";
-    return `<p class="mb-5 text-[0.98rem] leading-[1.9] text-gray-300">${renderInlineHtml(
-      b.children
-    )}</p>`;
+    if (!hasText(b)) return "";
+    return `<p class="mb-6 text-[1rem] leading-[1.9] text-gray-300">${renderInline(b.children)}</p>`;
   }
 
-  // quote
   if (type === "quote" || type === "blockquote") {
-    const t = textFrom(b?.children).trim();
-    if (!t) return "";
-    return `<blockquote class="my-7 border-l-4 border-blue-500/60 bg-blue-500/5 px-5 py-4 rounded-r-2xl text-gray-200 italic leading-relaxed">${renderInlineHtml(
-      b.children
-    )}</blockquote>`;
+    if (!hasText(b)) return "";
+    return `<blockquote class="my-8 pl-5 pr-4 py-4 border-l-4 border-blue-500 bg-blue-500/5 rounded-r-2xl italic text-gray-200 leading-relaxed text-[1.05rem]">${renderInline(b.children)}</blockquote>`;
   }
 
-  // code block
   if (type === "code" || type === "code-block") {
-    const code = (b?.code || textFrom(b?.children)).trim();
+    const code = (b?.code || b?.children?.map(c => c.text ?? "").join("\n") || "").trim();
     if (!code) return "";
-    return `<pre class="my-7 overflow-x-auto rounded-2xl border border-white/10 bg-black/40 p-5 text-sm leading-relaxed text-gray-200"><code>${esc(
-      code
-    )}</code></pre>`;
+    const lang = b?.language ? ` data-lang="${esc(b.language)}"` : "";
+    return `<pre${lang} class="my-8 overflow-x-auto rounded-2xl border border-white/10 bg-[#0d1117] p-5 text-sm leading-relaxed text-gray-300 font-mono"><code>${esc(code)}</code></pre>`;
   }
 
-  // list
   if (type === "list") {
     const ordered = b?.format === "ordered";
     const items = (b?.children || [])
       .map((li) => {
-        const inner = li?.children ?? li;
-        return esc(textFrom(inner).trim());
+        const ch = li?.children ?? (Array.isArray(li) ? li : [li]);
+        const inner = renderInline(ch);
+        return inner.trim() ? `<li class="mb-2 leading-relaxed">${inner}</li>` : "";
       })
       .filter(Boolean);
-
     if (!items.length) return "";
-
     const tag = ordered ? "ol" : "ul";
     const cls = ordered
-      ? "list-decimal pl-6 text-gray-300 space-y-2 mb-6"
-      : "list-disc pl-6 text-gray-300 space-y-2 mb-6";
+      ? "list-decimal pl-6 my-5 space-y-1 text-gray-300"
+      : "list-disc pl-6 my-5 space-y-1 text-gray-300";
+    return `<${tag} class="${cls}">${items.join("")}</${tag}>`;
+  }
 
-    return `<${tag} class="${cls}">${items
-      .map((t) => `<li class="leading-relaxed">${t}</li>`)
-      .join("")}</${tag}>`;
+  if (type === "image") {
+    const url = toAbs(b?.url ?? b?.src ?? "");
+    if (!url) return "";
+    const alt = esc(b?.alt ?? b?.caption ?? "");
+    const cap = b?.caption ? `<figcaption class="mt-2 text-center text-sm text-gray-500 italic">${esc(b.caption)}</figcaption>` : "";
+    return `<figure class="my-8""><img src="${url}" alt="${alt}" class="w-full rounded-2xl border border-white/8 object-cover" loading="lazy" decoding="async">${cap}</figure>`;
+  }
+
+  if (type === "divider" || type === "thematic-break") {
+    return `<hr class="my-10 border-white/10">`;
   }
 
   // fallback
-  const t = textFrom(b?.children ?? b).trim();
-  if (!t) return "";
-  return `<p class="mb-5 text-[0.98rem] leading-[1.9] text-gray-300">${esc(t)}</p>`;
+  if (hasText(b)) {
+    return `<p class="mb-6 text-[1rem] leading-[1.9] text-gray-300">${renderInline(b.children ?? [{ text: String(b) }])}</p>`;
+  }
+  return "";
+}
+
+// ── Rich-text body: puede ser string HTML o array Lexical ───────────────────
+function renderRichTextBody(body) {
+  if (!body) return "";
+  // String HTML directo (editor WYSIWYG viejo de Strapi)
+  if (typeof body === "string") {
+    // Arreglar rutas relativas de imágenes
+    return body
+      .replace(/src="\/uploads\//g, `src="${BASE.replace(/\/$/, "")}/uploads/`)
+      .replace(/(\/uploads\/)(thumbnail_|small_|medium_)/g, "$1");
+  }
+  // Array Lexical (Strapi v5 Block Editor o configuración moderna)
+  if (Array.isArray(body)) {
+    return body.map(lexicalToHtml).filter(Boolean).join("\n");
+  }
+  return "";
+}
+
+// ── Dynamic Zone block → HTML ────────────────────────────────────────────────
+function dynamicZoneToHtml(b) {
+  const comp = b?.__component ?? "";
+
+  // shared.rich-text  →  { body: string | LexicalNode[] }
+  if (comp === "shared.rich-text" || comp.endsWith(".rich-text")) {
+    const html = renderRichTextBody(b.body ?? b.content ?? b.text ?? "");
+    return html ? `<div class="rich-text-block">${html}</div>` : "";
+  }
+
+  // shared.quote  →  { title?: string, body: string }
+  if (comp === "shared.quote" || comp.endsWith(".quote")) {
+    const title = b.title ? `<cite class="block mt-3 text-sm font-semibold text-blue-400 not-italic">— ${esc(b.title)}</cite>` : "";
+    const text = esc(b.body ?? b.text ?? b.quote ?? "").trim();
+    if (!text) return "";
+    return `<blockquote class="my-8 pl-5 pr-4 py-5 border-l-4 border-blue-500 bg-blue-500/5 rounded-r-2xl italic text-gray-200 leading-relaxed text-[1.05rem]">${text}${title}</blockquote>`;
+  }
+
+  // shared.media  →  { file: MediaObject }
+  if (comp === "shared.media" || comp.endsWith(".media")) {
+    const url = pickUrl(b.file ?? b.media ?? b.image);
+    if (!url) return "";
+    const alt = esc(b.file?.data?.attributes?.alternativeText ?? b.caption ?? "");
+    const cap = b.caption ? `<figcaption class="mt-2 text-center text-sm text-gray-500 italic">${esc(b.caption)}</figcaption>` : "";
+    return `<figure class="my-8"><img src="${url}" alt="${alt}" class="w-full rounded-2xl border border-white/8 object-cover" loading="lazy" decoding="async">${cap}</figure>`;
+  }
+
+  // shared.slider  →  { files: MediaObject[] }
+  if (comp === "shared.slider" || comp.endsWith(".slider")) {
+    const files = b.files?.data ?? b.files ?? [];
+    if (!files.length) return "";
+    const imgs = files.map((f) => {
+      const url = pickUrl(f);
+      const alt = esc(f?.data?.attributes?.alternativeText ?? f?.attributes?.alternativeText ?? "");
+      return url ? `<img src="${url}" alt="${alt}" class="w-full rounded-xl object-cover shrink-0 snap-center" loading="lazy" decoding="async">` : "";
+    }).filter(Boolean).join("\n");
+    return `<div class="my-8 flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-thin scrollbar-thumb-white/10">${imgs}</div>`;
+  }
+
+  // Fallback: intentar renderizar como Lexical si tiene type
+  if (b?.type) return lexicalToHtml(b);
+
+  return "";
+}
+
+// ── Router principal ─────────────────────────────────────────────────────────
+function renderBlock(b) {
+  if (!b) return "";
+  // Dynamic Zone
+  if (b.__component) return dynamicZoneToHtml(b);
+  // Lexical / Block Editor
+  if (b.type) return lexicalToHtml(b);
+  return "";
 }
 ---
 
-{Array.isArray(blocks) && blocks.map((b) => (
-  <div class="contents" set:html={renderBlockHtml(b)} />
-))}
+{Array.isArray(blocks) && blocks.length > 0
+  ? blocks.map((b) => (
+      <div class="contents" set:html={renderBlock(b)} />
+    ))
+  : <p class="text-gray-500 italic text-sm">Sin contenido.</p>
+}

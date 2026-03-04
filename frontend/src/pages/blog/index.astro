@@ -15,26 +15,22 @@ const params = new URL(Astro.url).searchParams;
 const page = Math.max(1, parseInt(params.get("page") ?? "1", 10));
 const pageSize = 9;
 
-const q = (params.get("q") ?? "").trim();
-const cat = (params.get("cat") ?? "").trim(); // ✅ NUEVO
+const q   = (params.get("q")   ?? "").trim();
+const cat = (params.get("cat") ?? "").trim();
 const hasQuery = !!q;
-const hasCat = !!cat;
+const hasCat   = !!cat;
 
-let articles = [];
-let pageCount = 1;
-let total = 0;
-let featured = null;
-
-let categories = []; // ✅ NUEVO
+let articles   = [];
+let pageCount  = 1;
+let total      = 0;
+let featured   = null;
+let categories = [];
 
 const toAbs = (maybeUrl) => {
   if (!maybeUrl) return null;
   if (/^https?:\/\//i.test(maybeUrl)) return maybeUrl;
-  try {
-    return new URL(maybeUrl, STRAPI_URL).toString();
-  } catch {
-    return null;
-  }
+  try { return new URL(maybeUrl, STRAPI_URL).toString(); }
+  catch { return null; }
 };
 
 const pickMediaUrl = (media) => {
@@ -44,48 +40,50 @@ const pickMediaUrl = (media) => {
     media?.attributes ??
     media ??
     null;
-
   const rel =
     m?.formats?.large?.url ??
     m?.formats?.medium?.url ??
     m?.formats?.small?.url ??
-    m?.formats?.thumbnail?.url ??
     m?.url ??
     null;
-
   return rel ? toAbs(rel) : null;
 };
 
 try {
-  const populate =
-  "populate[cover]=true&populate[author][populate]=avatar&populate[category]=true";
-  const qs = new URLSearchParams({
-    "pagination[page]": String(page),
-    "pagination[pageSize]": String(pageSize),
-    sort: "publishedAt:desc",
-  });
+  // ─────────────────────────────────────────────────────────────────────────
+  // IMPORTANTE: construir la QS con strings literales.
+  // URLSearchParams codifica los corchetes → %5B%5D → Strapi los ignora.
+  // ─────────────────────────────────────────────────────────────────────────
+  const parts = [
+    `pagination[page]=${page}`,
+    `pagination[pageSize]=${pageSize}`,
+    `sort=publishedAt:desc`,
+    `populate[0]=cover`,
+    `populate[1]=author.avatar`,
+    `populate[2]=category`,
+    `populate[3]=blocks`,
+  ];
 
-  if (q) qs.set("filters[title][$containsi]", q);
+  if (q)   parts.push(`filters[title][$containsi]=${encodeURIComponent(q)}`);
+  if (cat) parts.push(`filters[category][slug][$eq]=${encodeURIComponent(cat)}`);
 
-  // ✅ NUEVO: filtrar por categoría slug
-  if (cat) qs.set("filters[category][slug][$eq]", cat);
+  const qs = parts.join("&");
+
+  const populateSimple = "populate[0]=cover&populate[1]=author.avatar&populate[2]=category&populate[3]=blocks";
 
   const [mainRes, featuredRes, catsRes] = await Promise.all([
-    fetch(`${STRAPI_URL}/api/articles?${populate}&${qs.toString()}`),
+    fetch(`${STRAPI_URL}/api/articles?${qs}`),
     page === 1 && !q && !cat
-      ? fetch(
-          `${STRAPI_URL}/api/articles?${populate}&pagination[limit]=1&sort=publishedAt:desc&filters[featured][$eq]=true`
-        )
+      ? fetch(`${STRAPI_URL}/api/articles?${populateSimple}&pagination[limit]=1&sort=publishedAt:desc&filters[featured][$eq]=true`)
       : Promise.resolve(null),
-    fetch(`${STRAPI_URL}/api/categories?pagination[pageSize]=100&sort=name:asc`), // ✅ NUEVO
+    fetch(`${STRAPI_URL}/api/categories?pagination[pageSize]=100&sort=name:asc`),
   ]);
 
   const mainData = await mainRes.json();
-  articles = mainData?.data ?? [];
+  articles  = mainData?.data ?? [];
   pageCount = mainData?.meta?.pagination?.pageCount ?? 1;
-  total = mainData?.meta?.pagination?.total ?? 0;
+  total     = mainData?.meta?.pagination?.total ?? 0;
 
-  // ✅ categorías
   const catsData = await catsRes.json();
   categories = (catsData?.data ?? []).map((c) => c?.attributes ?? c);
 
@@ -94,32 +92,20 @@ try {
     const raw = featuredData?.data?.[0];
     if (raw) featured = raw.attributes ?? raw;
   }
-} catch {
-  articles = [];
-  pageCount = 1;
-  total = 0;
-  featured = null;
-  categories = [];
+} catch (e) {
+  articles = []; pageCount = 1; total = 0; featured = null; categories = [];
 }
 
-const formatDate = (iso) =>
-  new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", year: "numeric" }).format(
-    new Date(iso)
-  );
-
-// Evita duplicar el destacado
-const featuredSlug = featured?.slug ?? null;
-const gridArticles =
+const featuredSlug  = featured?.slug ?? null;
+const gridArticles  =
   page === 1 && featuredSlug && !hasQuery && !hasCat
     ? articles.filter((it) => (it.attributes?.slug ?? it.slug) !== featuredSlug)
     : articles;
 
-// URLs para paginación y limpiar
-const clearUrl = "/blog";
-
-const buildUrl = (nextPage) => {
+const clearUrl  = "/blog";
+const buildUrl  = (nextPage) => {
   const u = new URL("/blog", "https://dummy.local");
-  if (q) u.searchParams.set("q", q);
+  if (q)   u.searchParams.set("q", q);
   if (cat) u.searchParams.set("cat", cat);
   if (nextPage && nextPage > 1) u.searchParams.set("page", String(nextPage));
   return u.pathname + (u.search ? u.search : "");
@@ -134,27 +120,25 @@ const activeCategoryName =
   description="Artículos, guías y noticias sobre tecnología y gadgets en ZetaGadget."
 >
   <main class="container-page py-10">
-    <!-- Header (card) -->
+
+    <!-- Header -->
     <div
       class="mb-8 rounded-3xl p-6 sm:p-8"
       style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
     >
       <div class="flex flex-col gap-2 max-w-2xl">
-        <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">
-          Blog
-        </p>
+        <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Blog</p>
 
         <div class="flex flex-wrap items-end justify-between gap-3">
           <h1 class="text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">
-            Artículos & Guías
+            Artículos &amp; Guías
           </h1>
-
           {total > 0 && (
             <span
               class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
               style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
             >
-              {total} artículo{total !== 1 ? "s" : ""}
+              <span data-blog-count>{total}</span>&nbsp;artículo{total !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -178,6 +162,7 @@ const activeCategoryName =
       method="get"
       action="/blog"
     >
+      <!-- Búsqueda -->
       <div class="flex-1 flex items-center gap-3">
         <div
           class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
@@ -188,58 +173,41 @@ const activeCategoryName =
             <path d="M12 12l4 4" stroke="rgba(58,160,255,0.9)" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
         </div>
-
         <div class="w-full">
           <label class="block text-xs font-semibold mb-1" style="color: rgba(229,229,229,0.65);">
             Buscar artículos
           </label>
           <input
             name="q"
+            data-blog-q
             value={q}
-            placeholder="Ej: auriculares, iPhone, guías, recomendaciones…"
+            placeholder=""
             class="w-full rounded-xl px-4 py-3 text-sm outline-none"
             style="background:#0f1115; border: 1px solid rgba(255,255,255,0.12); color:#e5e5e5;"
           />
         </div>
       </div>
 
+      <!-- Categoría -->
       <div class="w-full lg:w-72">
         <label class="block text-xs font-semibold mb-1" style="color: rgba(229,229,229,0.65);">
           Categoría
         </label>
         <select
           name="cat"
+          data-blog-cat
           class="w-full rounded-xl px-4 py-3 text-sm outline-none"
           style="background:#0f1115; border: 1px solid rgba(255,255,255,0.12); color:#e5e5e5;"
         >
           <option value="">Todas</option>
           {categories.map((c) => (
-            <option value={c.slug} selected={cat === c.slug}>
-              {c.name}
-            </option>
+            <option value={c.slug} selected={cat === c.slug}>{c.name}</option>
           ))}
         </select>
       </div>
 
-      <div class="flex items-center gap-2">
-        <button
-          type="submit"
-          class="rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200"
-          style="background:#1e88e5; color:#fff; border:1px solid #1e88e5;"
-        >
-          Filtrar
-        </button>
-
-        {(hasQuery || hasCat) && (
-          <a
-            href={clearUrl}
-            class="rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200"
-            style="background: rgba(255,255,255,0.06); color: rgba(229,229,229,0.85); border:1px solid rgba(255,255,255,0.10);"
-          >
-            Limpiar
-          </a>
-        )}
-      </div>
+      <!-- Botones -->
+      
     </form>
 
     <!-- Chips filtros activos -->
@@ -251,10 +219,9 @@ const activeCategoryName =
               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
               style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.20);"
             >
-              “{q}”
+              "{q}"
             </span>
           )}
-
           {hasCat && activeCategoryName && (
             <span
               class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
@@ -264,53 +231,66 @@ const activeCategoryName =
             </span>
           )}
         </div>
-
-        {(hasQuery || hasCat) && (
-          <a
-            href={clearUrl}
-            class="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors duration-200"
-            style="color: rgba(229,229,229,0.45);"
-          >
-            Quitar filtros
-          </a>
-        )}
+        <a
+          href={clearUrl}
+          class="inline-flex items-center gap-1.5 text-xs font-semibold"
+          style="color: rgba(229,229,229,0.45);"
+        >
+          Quitar filtros
+        </a>
       </div>
     )}
 
-    <!-- ✅ Tu destacado + grid siguen igual -->
-    <!-- (No te copio todo para no duplicar 300 líneas) -->
-
-    <!-- GRID -->
+    <!-- Grid artículos -->
     {gridArticles.length > 0 ? (
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div data-blog-grid class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {gridArticles.map((item: any) => {
           const a = item?.attributes ?? item;
-
           const author =
             a.author?.data?.attributes ??
             a.author?.data ??
             a.author ??
             null;
-
           const coverAbs = pickMediaUrl(a.cover);
+          const readingTime = getReadingTimeMinutes({ content: a.content, blocks: a.blocks });
 
           return (
-            <ArticleCard
-              article={{
-                title: a.title,
-                slug: a.slug,
-                description: a.description ?? a.excerpt,
-                coverUrl: coverAbs,
-                authorName: author?.name ?? a.authorName ?? null,
-                publishedAt: a.publishedAt,
-                readingTime: getReadingTimeMinutes({ content: a.content, blocks: a.blocks }),
-              }}
-            />
+            <article
+              data-blog-card
+              data-title={(a.title ?? "").toLowerCase()}
+              data-cat={a.category?.data?.attributes?.slug ?? a.category?.slug ?? ""}
+              data-reading={readingTime}
+              class="contents"
+            >
+              <ArticleCard
+                article={{
+                  title: a.title,
+                  slug: a.slug,
+                  description: a.description ?? a.excerpt,
+                  coverUrl: coverAbs,
+                  authorName: author?.name ?? a.authorName ?? null,
+                  publishedAt: a.publishedAt,
+                  readingTime,
+                }}
+              />
+            </article>
           );
         })}
       </div>
     ) : (
-      <div class="py-24 text-center opacity-70">No hay resultados.</div>
+      <div
+        data-blog-empty
+        class="py-24 text-center rounded-3xl"
+        style="background:#151a22; border: 1px solid rgba(255,255,255,0.07);"
+      >
+        <p class="text-lg font-semibold mb-2" style="color:#e5e5e5;">Sin resultados</p>
+        <p class="text-sm mb-6" style="color: rgba(229,229,229,0.45);">
+          Prueba con otro término o cambia la categoría.
+        </p>
+        <a href="/blog" class="px-5 py-2.5 rounded-xl text-sm font-semibold" style="background:#1e88e5; color:#fff;">
+          Ver todos
+        </a>
+      </div>
     )}
 
     {pageCount > 1 && (
@@ -318,6 +298,7 @@ const activeCategoryName =
         <Pagination pagination={{ page, pageCount }} buildUrl={buildUrl} />
       </div>
     )}
+
   </main>
-  <script type="module" src="/scripts/blog-filter.js"></script>
+  <script src="/scripts/blog-filter.js" is:inline></script>
 </BaseLayout>

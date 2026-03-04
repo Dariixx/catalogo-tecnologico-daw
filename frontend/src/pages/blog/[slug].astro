@@ -93,7 +93,14 @@ export async function getStaticPaths() {
 const { slug } = Astro.params;
 
 const articleRes = await strapiFetch(
-  `/articles?filters[slug][$eq]=${encodeURIComponent(slug)}&populate[author][populate]=avatar&populate[cover]=true&populate[category]=true`
+  `/articles?filters[slug][$eq]=${encodeURIComponent(slug)}` +
+  `&populate[0]=author.avatar` +
+  `&populate[1]=cover` +
+  `&populate[2]=category` +
+  `&populate[3]=blocks.file` +
+  `&populate[4]=blocks.files` +
+  `&populate[5]=blocks.image` +
+  `&populate[6]=blocks.media`
 );
 const articles = unwrapCollection(articleRes);
 const a = articles[0];
@@ -327,105 +334,178 @@ const contentHtml = a?.content ? fixRichTextImages(a.content) : null;
   </script>
 
   <style is:global>
-    .article-content {
-      font-size: 1rem;
-      line-height: 1.9;
-      color: rgba(229,229,229,0.75);
-    }
-    .article-content > * + * { margin-top: 1rem; }
+    /* ══════════════════════════════════════════════
+       ARTICLE CONTENT — estilos de blog legibles
+       ══════════════════════════════════════════════ */
 
+    .article-content {
+      font-size: 1.05rem;
+      line-height: 1.9;
+      color: rgba(229, 229, 229, 0.82);
+      word-break: break-word;
+    }
+
+    /* Espaciado entre bloques */
+    .article-content > * + * { margin-top: 0.25rem; }
+
+    /* ── Párrafos ── */
+    .article-content p {
+      margin-bottom: 1.4rem;
+      font-size: 1.05rem;
+      line-height: 1.9;
+      color: rgba(229, 229, 229, 0.80);
+    }
+
+    /* ── Headings ── */
     .article-content h2 {
-      font-size: 1.55rem;
-      line-height: 1.25;
+      font-size: clamp(1.4rem, 2.5vw, 1.85rem);
       font-weight: 800;
-      color: #e5e5e5;
-      margin-top: 2.2rem;
-      margin-bottom: 0.8rem;
+      color: #f0f0f0;
+      margin-top: 2.8rem;
+      margin-bottom: 1rem;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
     .article-content h3 {
-      font-size: 1.25rem;
+      font-size: clamp(1.15rem, 2vw, 1.4rem);
+      font-weight: 700;
+      color: #e5e5e5;
+      margin-top: 2.2rem;
+      margin-bottom: 0.75rem;
       line-height: 1.3;
-      font-weight: 800;
+    }
+    .article-content h4 {
+      font-size: 1.1rem;
+      font-weight: 700;
       color: #e5e5e5;
       margin-top: 1.8rem;
       margin-bottom: 0.6rem;
     }
-    .article-content h4 {
-      font-size: 1.1rem;
-      line-height: 1.35;
-      font-weight: 800;
-      color: #e5e5e5;
-      margin-top: 1.4rem;
-      margin-bottom: 0.5rem;
-    }
 
+    /* ── Links ── */
     .article-content a {
-      color: #3aa0ff;
+      color: #60a5fa;
       text-decoration: underline;
       text-underline-offset: 3px;
+      text-decoration-thickness: 1px;
+      transition: color 0.15s;
     }
-    .article-content a:hover { color: #1e88e5; }
+    .article-content a:hover { color: #93c5fd; }
 
+    /* ── Listas ── */
     .article-content ul,
     .article-content ol {
-      padding-left: 1.35rem;
-      margin-top: 0.75rem;
-      margin-bottom: 0.75rem;
-      color: rgba(229,229,229,0.70);
+      padding-left: 1.5rem;
+      margin-top: 0.5rem;
+      margin-bottom: 1.4rem;
+      color: rgba(229, 229, 229, 0.78);
     }
     .article-content ul { list-style: disc; }
     .article-content ol { list-style: decimal; }
-    .article-content li { margin: 0.35rem 0; }
+    .article-content li {
+      margin: 0.4rem 0;
+      line-height: 1.75;
+      padding-left: 0.25rem;
+    }
+    .article-content li::marker { color: #3b82f6; }
 
+    /* ── Blockquote ── */
     .article-content blockquote {
-      margin: 1.4rem 0;
-      padding: 1rem 1.1rem;
-      border-left: 3px solid #1e88e5;
-      background: rgba(30,136,229,0.06);
-      border-radius: 0 14px 14px 0;
-      color: rgba(229,229,229,0.70);
+      margin: 2rem 0;
+      padding: 1.1rem 1.4rem;
+      border-left: 3px solid #3b82f6;
+      background: rgba(59, 130, 246, 0.06);
+      border-radius: 0 16px 16px 0;
+      color: rgba(229, 229, 229, 0.82);
       font-style: italic;
+      font-size: 1.08rem;
+      line-height: 1.75;
+    }
+    .article-content blockquote cite {
+      display: block;
+      margin-top: 0.6rem;
+      font-size: 0.88rem;
+      font-style: normal;
+      font-weight: 600;
+      color: #60a5fa;
     }
 
-    .article-content pre {
-      margin: 1.4rem 0;
-      padding: 1.1rem 1.2rem;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.40);
-      overflow-x: auto;
-      font-size: 0.92rem;
-      line-height: 1.6;
-    }
-
+    /* ── Código inline ── */
     .article-content code {
-      background: rgba(30,136,229,0.12);
-      color: #8dc5ff;
-      padding: 0.15rem 0.45rem;
+      background: rgba(59, 130, 246, 0.10);
+      color: #93c5fd;
+      padding: 0.18rem 0.5rem;
       border-radius: 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 0.95em;
+      font-family: ui-monospace, "Fira Code", "Cascadia Code", SFMono-Regular, Menlo, monospace;
+      font-size: 0.9em;
+    }
+
+    /* ── Bloque de código ── */
+    .article-content pre {
+      margin: 2rem 0;
+      padding: 1.25rem 1.4rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #0d1117;
+      overflow-x: auto;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      position: relative;
+    }
+    .article-content pre::before {
+      content: attr(data-lang);
+      position: absolute;
+      top: 0.6rem;
+      right: 0.9rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-family: inherit;
     }
     .article-content pre code {
       background: transparent;
       padding: 0;
-      color: rgba(229,229,229,0.85);
+      color: rgba(229, 229, 229, 0.88);
+      font-size: inherit;
     }
 
-    /* ✅ importante: NO forzar 100% height, y evitar “pixelado” por escalado raro */
+    /* ── Imágenes ── */
     .article-content img {
       display: block;
       max-width: 100%;
       height: auto;
       border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.08);
-      margin: 1.2rem 0;
+      margin: 1.8rem auto;
+    }
+    .article-content figure {
+      margin: 2rem 0;
+    }
+    .article-content figcaption {
+      margin-top: 0.5rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: rgba(229,229,229,0.45);
+      font-style: italic;
     }
 
+    /* ── HR ── */
     .article-content hr {
       border: none;
       border-top: 1px solid rgba(255,255,255,0.08);
-      margin: 2rem 0;
+      margin: 2.5rem 0;
     }
+
+    /* ── Slider ── */
+    .article-content .scrollbar-thin::-webkit-scrollbar { height: 4px; }
+    .article-content .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 99px; }
+
+    /* ── Strong / em ── */
+    .article-content strong { color: #f0f0f0; font-weight: 700; }
+    .article-content em { font-style: italic; color: rgba(229,229,229,0.90); }
   </style>
 </BaseLayout>

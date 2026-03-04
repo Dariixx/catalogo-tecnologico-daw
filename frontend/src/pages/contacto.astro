@@ -4,148 +4,165 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 const STRAPI =
   import.meta.env.PUBLIC_STRAPI_URL ||
   import.meta.env.STRAPI_URL ||
-  process.env.PUBLIC_STRAPI_URL ||
-  process.env.STRAPI_URL ||
   "https://api.zetagadget.es";
+
+const quickItems = [
+  {
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4" stroke="#3aa0ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    title: "Envíos",
+    desc: "Te confirmamos el estado del pedido y el tracking si procede.",
+  },
+  {
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 9h18M3 9V6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3M3 9l2 11h14l2-11" stroke="#3aa0ff" stroke-width="1.6" stroke-linecap="round"/><path d="M9 13l2 2 4-4" stroke="#3aa0ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    title: "Devoluciones",
+    desc: "Indícanos el producto y el motivo para ayudarte rápido.",
+  },
+  {
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#3aa0ff" stroke-width="1.6"/><path d="M12 8v4l3 3" stroke="#3aa0ff" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+    title: "Soporte técnico",
+    desc: "Si es un error de la web, añade captura y URL de la página.",
+  },
+  {
+    icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#3aa0ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    title: "Consultas generales",
+    desc: "Cuéntanos cualquier duda sobre productos o el catálogo.",
+  },
+];
 ---
 
 <BaseLayout title="Contacto — ZetaGadget" description="Contacta con ZetaGadget">
   <main class="container-page py-10">
-    <!-- Header card -->
-    <div
-      class="mb-10 rounded-3xl p-6 sm:p-8"
-      style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
-    >
-      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">
-        Soporte
-      </p>
-      <h1 class="mt-2 text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">
-        Contacto
-      </h1>
+
+    <div class="mb-10 rounded-3xl p-6 sm:p-8"
+      style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Soporte</p>
+      <h1 class="mt-2 text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">Contacto</h1>
       <p class="mt-2 text-sm sm:text-base max-w-2xl" style="color: rgba(229,229,229,0.55);">
-        Envíanos tu consulta y te responderemos lo antes posible. También puedes revisar las respuestas rápidas.
+        Envíanos tu consulta y te responderemos lo antes posible.
       </p>
     </div>
 
-    <!-- Layout 2 columnas -->
     <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-      <!-- Form -->
-      <div
-        class="lg:col-span-2 rounded-3xl p-6 sm:p-8"
-        style="background:#151a22; border:1px solid rgba(255,255,255,0.08);"
-      >
+
+      <!-- FORMULARIO -->
+      <div class="lg:col-span-2 rounded-3xl p-6 sm:p-8"
+        style="background:#151a22; border:1px solid rgba(255,255,255,0.08);">
+
         <div class="flex items-center justify-between gap-3 mb-6">
           <h2 class="text-lg font-semibold" style="color:#e5e5e5;">Formulario</h2>
           <span class="text-xs" style="color: rgba(229,229,229,0.35);">Respuesta en 24–48h</span>
         </div>
 
-        <form id="contactForm" class="space-y-4">
+        <form id="contactForm" novalidate class="space-y-5">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="name">Nombre</label>
-              <input
-                class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-                style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-                id="name" name="name" autocomplete="name" required
-              />
-              <p class="mt-1 text-sm text-red-500 hidden" data-error="name"></p>
+              <label class="block text-sm font-medium mb-1" style="color:rgba(229,229,229,0.85);" for="name">Nombre</label>
+              <input id="name" name="name" autocomplete="name"
+                class="contact-input w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style="background:#0f1115; border:1px solid rgba(255,255,255,0.12); color:#e5e5e5;" />
+              <p class="contact-error mt-1.5 text-xs" data-error="name" style="color:#f87171; display:none;"></p>
             </div>
-
             <div>
-              <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="email">Email</label>
-              <input
-                class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-                style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-                id="email" name="email" type="email" autocomplete="email" required
-              />
-              <p class="mt-1 text-sm text-red-500 hidden" data-error="email"></p>
+              <label class="block text-sm font-medium mb-1" style="color:rgba(229,229,229,0.85);" for="email">Email</label>
+              <input id="email" name="email" type="email" autocomplete="email"
+                class="contact-input w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+                style="background:#0f1115; border:1px solid rgba(255,255,255,0.12); color:#e5e5e5;" />
+              <p class="contact-error mt-1.5 text-xs" data-error="email" style="color:#f87171; display:none;"></p>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="subject">Asunto</label>
-            <input
-              class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-              style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-              id="subject" name="subject" required
-            />
-            <p class="mt-1 text-sm text-red-500 hidden" data-error="subject"></p>
+            <label class="block text-sm font-medium mb-1" style="color:rgba(229,229,229,0.85);" for="subject">Asunto</label>
+            <input id="subject" name="subject"
+              class="contact-input w-full rounded-xl px-3 py-2.5 text-sm outline-none"
+              style="background:#0f1115; border:1px solid rgba(255,255,255,0.12); color:#e5e5e5;" />
+            <p class="contact-error mt-1.5 text-xs" data-error="subject" style="color:#f87171; display:none;"></p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium" style="color: rgba(229,229,229,0.85);" for="message">Mensaje</label>
-            <textarea
-              class="mt-1 w-full rounded-xl px-3 py-2.5 text-sm outline-none"
-              style="background:#0f1115;border:1px solid rgba(255,255,255,0.12);color:#e5e5e5;"
-              id="message" name="message" rows="7" required
-            ></textarea>
-            <p class="mt-1 text-sm text-red-500 hidden" data-error="message"></p>
-            <p class="mt-2 text-xs" style="color: rgba(229,229,229,0.35);">
-              Consejo: incluye el nombre del producto y el problema (envío, devolución, stock, etc.).
+            <label class="block text-sm font-medium mb-1" style="color:rgba(229,229,229,0.85);" for="message">Mensaje</label>
+            <textarea id="message" name="message" rows="7"
+              class="contact-input w-full rounded-xl px-3 py-2.5 text-sm outline-none resize-none"
+              style="background:#0f1115; border:1px solid rgba(255,255,255,0.12); color:#e5e5e5;"></textarea>
+            <p class="contact-error mt-1.5 text-xs" data-error="message" style="color:#f87171; display:none;"></p>
+            <p class="mt-2 text-xs" style="color:rgba(229,229,229,0.35);">
+              Incluye el nombre del producto y el problema si procede.
             </p>
           </div>
 
-          <div class="pt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <label class="flex items-start gap-2 text-sm" style="color: rgba(229,229,229,0.75);">
-              <input id="consent" name="consent" type="checkbox" class="mt-1" required />
+          <div>
+            <label class="flex items-start gap-2 text-sm cursor-pointer" style="color:rgba(229,229,229,0.75);">
+              <input id="consent" name="consent" type="checkbox" class="mt-1 accent-blue-500" />
               <span>Acepto la política de privacidad.</span>
             </label>
-            <p class="text-sm text-red-500 hidden" data-error="consent"></p>
+            <p class="contact-error mt-1 text-xs" data-error="consent" style="color:#f87171; display:none;"></p>
           </div>
 
-          <div class="pt-2 flex items-center gap-3">
-            <button
-              id="submitBtn"
-              type="submit"
-              class="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200"
-              style="background:#1e88e5;color:#fff;border:1px solid #1e88e5; box-shadow: 0 8px 28px rgba(30,136,229,0.18);"
-              onmouseover="this.style.background='#3aa0ff';"
-              onmouseout="this.style.background='#1e88e5';"
-            >
-              Enviar
+          <div class="pt-2">
+            <button id="submitBtn" type="submit"
+              class="rounded-xl px-6 py-2.5 text-sm font-semibold transition-all duration-200"
+              style="background:#1e88e5; color:#fff; border:1px solid #1e88e5; box-shadow:0 8px 28px rgba(30,136,229,0.18); opacity:0.55; cursor:not-allowed;">
+              Enviar mensaje
             </button>
-            <p id="formMsg" class="text-sm hidden"></p>
           </div>
         </form>
-      </div>
 
-      <!-- Panel info -->
-      <aside class="rounded-3xl p-6 sm:p-8 sticky top-24 h-fit"
-        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
-      >
-        <h2 class="text-lg font-semibold" style="color:#e5e5e5;">Respuestas rápidas</h2>
-
-        <div class="mt-4 space-y-4">
-          <div class="rounded-2xl p-4" style="background: rgba(21,26,34,0.7); border:1px solid rgba(255,255,255,0.07);">
-            <p class="text-sm font-semibold" style="color:#e5e5e5;">Envíos</p>
-            <p class="mt-1 text-sm" style="color: rgba(229,229,229,0.55);">
-              Te confirmamos el estado del pedido y el tracking si procede.
-            </p>
-          </div>
-
-          <div class="rounded-2xl p-4" style="background: rgba(21,26,34,0.7); border:1px solid rgba(255,255,255,0.07);">
-            <p class="text-sm font-semibold" style="color:#e5e5e5;">Devoluciones</p>
-            <p class="mt-1 text-sm" style="color: rgba(229,229,229,0.55);">
-              Indícanos el producto y el motivo para ayudarte rápido.
-            </p>
-          </div>
-
-          <div class="rounded-2xl p-4" style="background: rgba(21,26,34,0.7); border:1px solid rgba(255,255,255,0.07);">
-            <p class="text-sm font-semibold" style="color:#e5e5e5;">Soporte</p>
-            <p class="mt-1 text-sm" style="color: rgba(229,229,229,0.55);">
-              Si es un error de la web, añade captura y URL de la página.
-            </p>
+        <!-- Toast éxito -->
+        <div id="successToast" style="display:none;"
+          class="mt-5 flex items-center gap-3 px-5 py-4 rounded-2xl"
+          style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.22);">
+          <span class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+            style="background:rgba(34,197,94,0.15);">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="8" stroke="#4ade80" stroke-width="1.4"/>
+              <path d="M5.5 9l2.5 2.5L12.5 6" stroke="#4ade80" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <div>
+            <p class="text-sm font-semibold" style="color:#4ade80;">¡Mensaje enviado correctamente!</p>
+            <p class="text-xs mt-0.5" style="color:rgba(229,229,229,0.55);">Te responderemos en 24–48h. Revisa también el spam.</p>
           </div>
         </div>
 
+        <!-- Toast error de envío -->
+        <div id="errorToast" style="display:none;"
+          class="mt-5 flex items-center gap-3 px-5 py-4 rounded-2xl">
+          <span class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+            style="background:rgba(248,113,113,0.12);">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="9" r="8" stroke="#f87171" stroke-width="1.4"/>
+              <path d="M9 5v5M9 12.5v.5" stroke="#f87171" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <div>
+            <p class="text-sm font-semibold" style="color:#f87171;">No se pudo enviar</p>
+            <p id="errorToastMsg" class="text-xs mt-0.5" style="color:rgba(229,229,229,0.55);"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL LATERAL -->
+      <aside class="rounded-3xl p-6 sm:p-8 sticky top-24"
+        style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+        <h2 class="text-lg font-semibold" style="color:#e5e5e5;">Respuestas rápidas</h2>
+        <div class="mt-4 space-y-3">
+          {quickItems.map((item) => (
+            <div class="rounded-2xl p-4 flex items-start gap-3"
+              style="background:rgba(21,26,34,0.7); border:1px solid rgba(255,255,255,0.07);">
+              <span class="mt-0.5 shrink-0 w-8 h-8 rounded-xl flex items-center justify-center"
+                style="background:rgba(30,136,229,0.10); border:1px solid rgba(30,136,229,0.18);"
+                set:html={item.icon}></span>
+              <div>
+                <p class="text-sm font-semibold" style="color:#e5e5e5;">{item.title}</p>
+                <p class="mt-0.5 text-xs leading-relaxed" style="color:rgba(229,229,229,0.55);">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
         <div class="mt-6">
-          <a
-            href="/productos"
-            class="inline-flex items-center justify-center w-full px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
-            style="background: rgba(30,136,229,0.12); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.25);"
-            onmouseover="this.style.borderColor='rgba(58,160,255,0.45)';"
-            onmouseout="this.style.borderColor='rgba(30,136,229,0.25)';"
-          >
+          <a href="/productos"
+            class="inline-flex items-center justify-center w-full px-5 py-2.5 rounded-xl text-sm font-semibold"
+            style="background:rgba(30,136,229,0.12); color:#3aa0ff; border:1px solid rgba(30,136,229,0.25);">
             Volver a productos
           </a>
         </div>
@@ -153,109 +170,168 @@ const STRAPI =
     </section>
   </main>
 
-  <script type="module">
-    const STRAPI_URL = ({JSON.stringify(STRAPI)} || "").replace(/\/$/, "");
+  <style>
+    .contact-input { transition: border-color .15s, box-shadow .15s; }
+    .contact-input:focus {
+      border-color: rgba(30,136,229,0.55) !important;
+      box-shadow: 0 0 0 3px rgba(30,136,229,0.12);
+    }
+    .contact-input.is-error {
+      border-color: rgba(248,113,113,0.65) !important;
+      box-shadow: 0 0 0 3px rgba(248,113,113,0.08);
+    }
+  </style>
 
-    const form = document.getElementById("contactForm");
-    const msgEl = document.getElementById("formMsg");
-    const submitBtn = document.getElementById("submitBtn");
-    const consentEl = document.getElementById("consent");
+  <script define:vars={{ STRAPI }}>
+    const STRAPI_URL = (STRAPI || "").replace(/\/$/, "");
 
-    const syncSubmitState = () => {
-      submitBtn.disabled = !consentEl.checked;
-      submitBtn.style.opacity = consentEl.checked ? "1" : "0.6";
-      submitBtn.style.cursor = consentEl.checked ? "pointer" : "not-allowed";
+    const form       = document.getElementById("contactForm");
+    const submitBtn  = document.getElementById("submitBtn");
+    const consent    = document.getElementById("consent");
+    const toastOk    = document.getElementById("successToast");
+    const toastErr   = document.getElementById("errorToast");
+    const toastErrMsg = document.getElementById("errorToastMsg");
+
+    // ── Sync botón con checkbox ───────────────────────────────────────────
+    function syncBtn() {
+      const ok = consent.checked;
+      submitBtn.disabled    = !ok;
+      submitBtn.style.opacity = ok ? "1" : "0.55";
+      submitBtn.style.cursor  = ok ? "pointer" : "not-allowed";
+    }
+    consent.addEventListener("change", syncBtn);
+    syncBtn();
+
+    // ── Validación ────────────────────────────────────────────────────────
+    const rules = {
+      name:    { re: /^[A-Za-zÀ-ÿ0-9\s.'"-]{2,60}$/,    msg: "Nombre incorrecto (2-60 caracteres)." },
+      email:   { re: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i,  msg: "Email introducido incorrectamente."   },
+      subject: { re: /^.{3,80}$/,                         msg: "Asunto incorrecto (3-80 caracteres)."  },
+      message: { re: /^[\s\S]{10,2000}$/,                 msg: "Mensaje incorrecto (10-2000 caracteres)." },
     };
-    consentEl.addEventListener("change", syncSubmitState);
-    syncSubmitState();
 
-    const showError = (key, text) => {
-      const el = document.querySelector(`[data-error="${key}"]`);
+    function setFieldError(key, msg) {
+      const input = document.getElementById(key);
+      const errEl = document.querySelector(`[data-error="${key}"]`);
+      if (!errEl) return;
+      if (msg) {
+        errEl.textContent   = "⚠ " + msg;
+        errEl.style.display = "flex";
+        input?.classList.add("is-error");
+      } else {
+        errEl.style.display = "none";
+        input?.classList.remove("is-error");
+      }
+    }
+
+    function clearErrors() {
+      [...Object.keys(rules), "consent"].forEach((k) => setFieldError(k, ""));
+    }
+
+    // Validación en tiempo real al salir del campo
+    Object.keys(rules).forEach((key) => {
+      const el = document.getElementById(key);
       if (!el) return;
-      el.textContent = text;
-      el.classList.toggle("hidden", !text);
-    };
+      el.addEventListener("blur", () => {
+        const v = (el.value || "").trim();
+        if (v) setFieldError(key, rules[key].re.test(v) ? "" : rules[key].msg);
+      });
+      el.addEventListener("input", () => {
+        if (el.classList.contains("is-error")) {
+          if (rules[key].re.test((el.value || "").trim())) setFieldError(key, "");
+        }
+      });
+    });
 
-    const clearErrors = () =>
-      ["name", "email", "subject", "message", "consent"].forEach((k) => showError(k, ""));
-
-    const normalize = (s) => (s || "").trim().replace(/\s+/g, " ");
-
-    const validators = {
-      name: (v) => (/^[A-Za-zÀ-ÿ0-9\s.'-]{2,60}$/).test(v) ? "" : "Nombre no válido (2-60).",
-      email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i).test(v) ? "" : "Email no válido.",
-      subject: (v) => (/^.{3,80}$/).test(v) ? "" : "Asunto no válido (3-80).",
-      message: (v) => (/^.{10,2000}$/s).test(v) ? "" : "Mensaje no válido (10-2000).",
-      consent: (v) => (v ? "" : "Debes aceptar la política."),
-    };
-
+    // ── Submit ─────────────────────────────────────────────────────────────
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       clearErrors();
+      toastOk.style.display  = "none";
+      toastErr.style.display = "none";
 
-      const name = normalize(form.name.value);
-      const email = normalize(form.email.value);
-      const subject = normalize(form.subject.value);
+      const name    = (form.name.value    || "").trim();
+      const email   = (form.email.value   || "").trim();
+      const subject = (form.subject.value || "").trim();
       const message = (form.message.value || "").trim();
-      const consent = form.consent.checked;
-
-      const errors = {
-        name: validators.name(name),
-        email: validators.email(email),
-        subject: validators.subject(subject),
-        message: validators.message(message),
-        consent: validators.consent(consent),
-      };
 
       let hasError = false;
-      for (const [k, v] of Object.entries(errors)) {
-        if (v) { showError(k, v); hasError = true; }
+      for (const [k, r] of Object.entries(rules)) {
+        const v = k === "name" ? name : k === "email" ? email : k === "subject" ? subject : message;
+        if (!r.re.test(v)) { setFieldError(k, r.msg); hasError = true; }
+      }
+      if (!consent.checked) {
+        setFieldError("consent", "Debes aceptar la política de privacidad.");
+        hasError = true;
       }
       if (hasError) return;
 
-      if (!STRAPI_URL) {
-        msgEl.classList.remove("hidden");
-        msgEl.textContent = "Falta configurar PUBLIC_STRAPI_URL en el .env del frontend.";
-        msgEl.style.color = "#f87171";
-        return;
-      }
-
+      // Estado de carga
       submitBtn.disabled = true;
-      msgEl.classList.remove("hidden");
-      msgEl.style.color = "rgba(229,229,229,0.75)";
-      msgEl.textContent = "Enviando...";
+      submitBtn.textContent = "Enviando...";
+      submitBtn.style.opacity = "0.7";
 
-      try {
-        const res = await fetch(`${STRAPI_URL}/api/contact-submissions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: { name, email, subject, message, consent } }),
-        });
+      // ── Intentar envío a Strapi ──────────────────────────────────────────
+      // Si Strapi devuelve 405 (no hay colección), abrimos mailto como fallback
+      let sent = false;
 
-        const data = await res.json().catch(() => ({}));
+      if (STRAPI_URL) {
+        try {
+          const res = await fetch(`${STRAPI_URL}/api/contact-submissions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: { name, email, subject, message, consent: true } }),
+          });
 
-        if (!res.ok) {
-          const errMsg =
-            data?.error?.message ||
-            data?.error?.details?.errors?.[0]?.message ||
-            data?.message ||
-            `Error al enviar (HTTP ${res.status}).`;
-          msgEl.style.color = "#f87171";
-          msgEl.textContent = errMsg;
-          return;
+          if (res.ok) {
+            sent = true;
+          } else if (res.status === 405 || res.status === 404) {
+            // Colección no existe en Strapi → fallback mailto silencioso
+            sent = false;
+          } else {
+            const data = await res.json().catch(() => ({}));
+            const msg = data?.error?.message || `Error ${res.status}`;
+            showError(msg);
+            return;
+          }
+        } catch {
+          // Error de red → fallback mailto
+          sent = false;
         }
-
-        msgEl.style.color = "#4ade80";
-        msgEl.textContent = "¡Mensaje enviado! Gracias 😊";
-        form.reset();
-        syncSubmitState();
-      } catch {
-        msgEl.style.color = "#f87171";
-        msgEl.textContent = "Error de red. Inténtalo más tarde.";
-      } finally {
-        submitBtn.disabled = false;
-        syncSubmitState();
       }
+
+      // ── Fallback: abrir mailto si Strapi no está disponible ──────────────
+      if (!sent) {
+        const body = encodeURIComponent(
+          `Nombre: ${name}\nEmail: ${email}\n\n${message}`
+        );
+        window.location.href = `mailto:info@zetagadget.es?subject=${encodeURIComponent(subject)}&body=${body}`;
+        sent = true; // consideramos enviado
+      }
+
+      // ── Toast de éxito ────────────────────────────────────────────────────
+      if (sent) {
+        form.reset();
+        syncBtn();
+        toastOk.style.display = "flex";
+        toastOk.style.background = "rgba(34,197,94,0.08)";
+        toastOk.style.border     = "1px solid rgba(34,197,94,0.22)";
+        setTimeout(() => { toastOk.style.display = "none"; }, 8000);
+      }
+
+      submitBtn.disabled    = false;
+      submitBtn.textContent = "Enviar mensaje";
+      syncBtn();
     });
+
+    function showError(msg) {
+      toastErrMsg.textContent  = msg;
+      toastErr.style.display   = "flex";
+      toastErr.style.background = "rgba(248,113,113,0.06)";
+      toastErr.style.border    = "1px solid rgba(248,113,113,0.20)";
+      submitBtn.disabled    = false;
+      submitBtn.textContent = "Enviar mensaje";
+      syncBtn();
+    }
   </script>
 </BaseLayout>

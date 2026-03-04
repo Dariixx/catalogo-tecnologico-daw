@@ -1,5 +1,4 @@
-
-
+<!-- CartDrawer.astro -->
 <!-- Overlay -->
 <div id="zgCartOverlay" class="fixed inset-0 z-[90] hidden" style="background: rgba(0,0,0,.55);"></div>
 
@@ -12,188 +11,163 @@
 >
   <div class="h-16 px-5 flex items-center justify-between" style="border-bottom:1px solid rgba(255,255,255,0.08);">
     <div class="font-semibold" style="color:#e5e5e5;">Carrito</div>
-    <button id="zgCartClose" class="w-9 h-9 rounded-lg" style="border:1px solid rgba(255,255,255,0.10); color:#e5e5e5;">
-      ✕
-    </button>
+    <button id="zgCartClose" class="w-9 h-9 rounded-lg grid place-items-center" style="border:1px solid rgba(255,255,255,0.10); color:#e5e5e5;">✕</button>
   </div>
 
-  <div id="zgCartBody" class="p-5 space-y-3" style="color: rgba(229,229,229,0.8);"></div>
+  <div id="zgCartBody" class="flex-1 overflow-y-auto p-5 space-y-3" style="color: rgba(229,229,229,0.8);"></div>
 
-  <div class="mt-auto p-5" style="border-top:1px solid rgba(255,255,255,0.08);">
+  <div class="p-5" style="border-top:1px solid rgba(255,255,255,0.08);">
     <div class="flex items-center justify-between mb-3">
       <span style="color: rgba(229,229,229,0.6);">Total</span>
       <strong id="zgCartTotal" style="color:#e5e5e5;">0,00 €</strong>
     </div>
     <button
       type="button"
-      class="w-full py-2.5 rounded-xl font-semibold"
+      class="w-full py-2.5 rounded-xl font-semibold transition-colors duration-150"
       style="background:#1e88e5;color:#fff;border:1px solid #1e88e5;"
+      onmouseover="this.style.background='#3aa0ff'"
+      onmouseout="this.style.background='#1e88e5'"
     >
-      Finalizar (demo)
+      Finalizar compra
     </button>
   </div>
 </aside>
 
 <script type="module">
- const api = window.ZG_CART;
-if (!api) {
-  console.error("ZG_CART no cargado");
-  return;
-}
+  // Esperar a que ZG_CART esté disponible (cart-init.js se carga antes)
+  function waitForApi(cb, retries = 20) {
+    if (window.ZG_CART) { cb(window.ZG_CART); return; }
+    if (retries <= 0) { console.error("[CartDrawer] ZG_CART no disponible"); return; }
+    setTimeout(() => waitForApi(cb, retries - 1), 50);
+  }
 
-const { getCart, addToCart, setQty, removeFromCart, countItems } = api;
-  const drawer = document.getElementById("zgCartDrawer");
-  const overlay = document.getElementById("zgCartOverlay");
-  const closeBtn = document.getElementById("zgCartClose");
-  const body = document.getElementById("zgCartBody");
-  const totalEl = document.getElementById("zgCartTotal");
-  const badge = document.getElementById("cartBadge");
+  waitForApi(({ getCart, addToCart, setQty, removeFromCart, countItems, showToast, feedbackBtn }) => {
+    const drawer  = document.getElementById("zgCartDrawer");
+    const overlay = document.getElementById("zgCartOverlay");
+    const closeBtn = document.getElementById("zgCartClose");
+    const body    = document.getElementById("zgCartBody");
+    const totalEl = document.getElementById("zgCartTotal");
+    const badge   = document.getElementById("cartBadge");
+    const euro    = new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" });
 
-  const euro = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+    // ── Render ──────────────────────────────────────────────────────────────
+    function render() {
+      const items = getCart();
 
-  function render() {
-    const items = getCart();
+      if (badge) {
+        const n = countItems(items);
+        badge.textContent = String(n);
+        badge.classList.toggle("hidden", n <= 0);
+      }
 
-    // badge
-    if (badge) {
-     const n = countItems(items);
-      badge.textContent = String(n);
-      badge.classList.toggle("hidden", n <= 0);
-    }
+      if (!body || !totalEl) return;
 
-    if (!body || !totalEl) return;
+      if (!items.length) {
+        body.innerHTML = '<p style="opacity:.55; font-size:.9rem; padding-top:.5rem;">Tu carrito está vacío.</p>';
+        totalEl.textContent = euro.format(0);
+        return;
+      }
 
-    if (!items.length) {
-      body.innerHTML = '<div style="opacity:.65">Tu carrito está vacío.</div>';
-      totalEl.textContent = euro.format(0);
-      return;
-    }
-
-    let total = 0;
-
-    body.innerHTML = items.map((it) => {
-      const id = String(it.id ?? it.slug ?? "");
-      const price = Number(it.price) || 0;
-      const q = Math.max(1, Number(it.qty) || 1);
-      total += price * q;
-
-      return `
-        <div style="border:1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); border-radius: 14px; padding: 12px;">
-          <div style="display:flex; justify-content:space-between; gap:12px;">
-            <div style="min-width:0;">
-              <div style="font-weight:600; color:#e5e5e5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                ${it.name || "Producto"}
+      let total = 0;
+      body.innerHTML = items.map((it) => {
+        const id    = String(it.id ?? it.slug ?? "");
+        const price = Number(it.price) || 0;
+        const q     = Math.max(1, Number(it.qty) || 1);
+        total += price * q;
+        return `
+          <div style="border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); border-radius:14px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; gap:12px;">
+              <div style="min-width:0; flex:1;">
+                <div style="font-weight:600; color:#e5e5e5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.name || "Producto"}</div>
+                <div style="opacity:.55; font-size:12px; margin-top:2px;">${euro.format(price)}</div>
               </div>
-              <div style="opacity:.6; font-size: 12px; margin-top:2px;">
-                ${euro.format(price)}
+              <button type="button" data-remove-id="${id}"
+                style="opacity:.7; border:1px solid rgba(255,255,255,0.10); background:transparent; color:#e5e5e5; border-radius:10px; padding:4px 10px; font-size:.8rem; flex-shrink:0;">
+                Quitar
+              </button>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <button type="button" data-dec-id="${id}"
+                  style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;font-size:1.1rem;line-height:1;">−</button>
+                <strong style="min-width:20px; text-align:center; color:#e5e5e5;">${q}</strong>
+                <button type="button" data-inc-id="${id}"
+                  style="width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;font-size:1.1rem;line-height:1;">+</button>
               </div>
+              <strong style="color:#e5e5e5;">${euro.format(price * q)}</strong>
             </div>
-
-            <button
-              type="button"
-              data-remove-id="${id}"
-              style="opacity:.8; border:1px solid rgba(255,255,255,0.10); background:transparent; color:#e5e5e5; border-radius:10px; padding:6px 10px;"
-            >
-              Quitar
-            </button>
-          </div>
-
-          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <button type="button" data-dec-id="${id}"
-                style="width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;"
-              >−</button>
-
-              <strong style="min-width:22px; text-align:center;">${q}</strong>
-
-              <button type="button" data-inc-id="${id}"
-                style="width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,0.10);background:transparent;color:#e5e5e5;"
-              >+</button>
-            </div>
-
-            <strong style="color:#e5e5e5;">${euro.format(price * q)}</strong>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    totalEl.textContent = euro.format(total);
-  }
-
-  function openCart() {
-    overlay?.classList.remove("hidden");
-    drawer?.classList.remove("translate-x-full");
-    render();
-  }
-
-  function closeCart() {
-    drawer?.classList.add("translate-x-full");
-    overlay?.classList.add("hidden");
-  }
-
-  // Listener único global (abre carrito + añade + acciones)
-  document.addEventListener("click", (e) => {
-    const t = e.target instanceof Element ? e.target : null;
-    if (!t) return;
-
-    // Abrir
-    if (t.closest("[data-open-cart], [data-cart-button]")) {
-      e.preventDefault();
-      openCart();
-      return;
+          </div>`;
+      }).join("");
+      totalEl.textContent = euro.format(total);
     }
 
-    // Añadir
-    const addBtn = t.closest("[data-add-to-cart]");
-    if (addBtn) {
-      e.preventDefault();
-
-      addToCart({
-        id: addBtn.getAttribute("data-id") || addBtn.getAttribute("data-slug") || "",
-        name: addBtn.getAttribute("data-name") || "Producto",
-        price: Number(addBtn.getAttribute("data-price") || 0),
-        slug: addBtn.getAttribute("data-slug") || "",
-        qty: 1,
-      });
-
-      openCart();
-      return;
-    }
-
-    // Quitar / + / -
-    const rm = t.closest("[data-remove-id]");
-    if (rm) {
-      removeFromCart(rm.getAttribute("data-remove-id"));
+    // ── Abrir / cerrar ──────────────────────────────────────────────────────
+    function openCart() {
+      overlay?.classList.remove("hidden");
+      drawer?.classList.remove("translate-x-full");
       render();
-      return;
+    }
+    function closeCart() {
+      drawer?.classList.add("translate-x-full");
+      overlay?.classList.add("hidden");
     }
 
-    const inc = t.closest("[data-inc-id]");
-if (inc) {
-  const id = inc.getAttribute("data-inc-id");
-  const current = getCart().find(it => String(it.id) === String(id));
-  const q = Number(current?.qty) || 1;
-  setQty(id, q + 1);
-  render();
-  return;
-}
+    overlay?.addEventListener("click", closeCart);
+    closeBtn?.addEventListener("click", closeCart);
+    window.addEventListener("cart:open",  openCart);
+    window.addEventListener("cart:close", closeCart);
+    window.addEventListener("cart:updated", render);
 
-const dec = t.closest("[data-dec-id]");
-if (dec) {
-  const id = dec.getAttribute("data-dec-id");
-  const current = getCart().find(it => String(it.id) === String(id));
-  const q = Number(current?.qty) || 1;
-  setQty(id, q - 1); // tu setQty ya elimina si baja a 0
-  render();
-  return;
-}
+    // ── Click delegado: add / inc / dec / remove ────────────────────────────
+    // ESTE es el único listener para [data-add-to-cart].
+    // cart-init.js NO tiene ninguno → imposible duplicar.
+    document.addEventListener("click", (e) => {
+      const t = e.target instanceof Element ? e.target : null;
+      if (!t) return;
+
+      // Abrir carrito
+      if (t.closest("[data-open-cart], [data-cart-button]")) {
+        e.preventDefault();
+        openCart();
+        return;
+      }
+
+      // Añadir al carrito
+      const addBtn = t.closest("[data-add-to-cart]");
+      if (addBtn && !addBtn.disabled && !addBtn.dataset.fbActive) {
+        e.preventDefault();
+        const id    = addBtn.dataset.id    ?? addBtn.dataset.slug ?? "";
+        const name  = addBtn.dataset.name  ?? "Producto";
+        const price = parseFloat(addBtn.dataset.price ?? "0") || 0;
+        const slug  = addBtn.dataset.slug  ?? "";
+        addToCart({ id, name, price, slug });
+        showToast?.(name);
+        feedbackBtn?.(id);
+        openCart();
+        return;
+      }
+
+      // Quitar
+      const rm = t.closest("[data-remove-id]");
+      if (rm) { removeFromCart(rm.dataset.removeId); render(); return; }
+
+      // Incrementar
+      const inc = t.closest("[data-inc-id]");
+      if (inc) {
+        const id = inc.dataset.incId;
+        const q  = Number(getCart().find(i => String(i.id) === id)?.qty) || 1;
+        setQty(id, q + 1); render(); return;
+      }
+
+      // Decrementar
+      const dec = t.closest("[data-dec-id]");
+      if (dec) {
+        const id = dec.dataset.decId;
+        const q  = Number(getCart().find(i => String(i.id) === id)?.qty) || 1;
+        setQty(id, q - 1); render(); return;
+      }
+    });
+
+    render();
   });
-
-  overlay?.addEventListener("click", closeCart);
-  closeBtn?.addEventListener("click", closeCart);
-
-  window.addEventListener("cart:updated", render);
-  window.addEventListener("storage", render);
-
-  render();
 </script>

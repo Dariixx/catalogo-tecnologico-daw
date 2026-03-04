@@ -1,36 +1,348 @@
 @import "tailwindcss";
 
-
-:root{
-  --bg: 15 17 21;
-  --panel: 21 26 34;
-  --panel-2: 18 22 30;
-  --border: 255 255 255;
-  --text: 229 229 229;
-  --muted: 229 229 229;
-  --brand: 30 136 229;
-  --brand-2: 58 160 255;
-
-  --radius: 14px;
-  --shadow: 0 12px 30px rgba(0,0,0,.35);
+/* ══════════════════════════════════════════════════════
+   MODO OSCURO — default
+══════════════════════════════════════════════════════ */
+:root {
+  --bg:      15  17  21;
+  --panel:   21  26  34;
+  --panel-2: 18  22  30;
+  --border:  255 255 255;
+  --text:    229 229 229;
+  --muted:   229 229 229;
+  --brand:   30  136 229;
+  --brand-2: 58  160 255;
+  --radius:  14px;
+  --shadow:  0 12px 30px rgba(0,0,0,.35);
 }
 
+/* ══════════════════════════════════════════════════════
+   MODO CLARO — clase "light" en <html>
+   Blanco real con azul de marca intacto
+══════════════════════════════════════════════════════ */
+html.light {
+  --bg:      236 239 246;
+  --panel:   246 248 253;
+  --panel-2: 232 235 244;
+  --border:  15  20  40;
+  --text:    15  20  40;
+  --muted:   15  20  40;
+  --brand:   30  136 229;
+  --brand-2: 14  100 195;
+  --shadow:  0 4px 20px rgba(0,0,0,.08);
+}
 
-@layer base{
-  html{ scroll-behavior:smooth; }
-  body{
+/* ══════════════════════════════════════════════════════
+   BASE
+══════════════════════════════════════════════════════ */
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
     background: rgb(var(--bg));
     color: rgb(var(--text));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  a{ color: inherit; text-decoration: none; }
-  ::selection{ background: rgba(var(--brand), .25); }
+  a { color: inherit; text-decoration: none; }
+  ::selection { background: rgba(var(--brand), .20); }
 }
 
+/* ══════════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════════ */
+@layer utilities {
+  .container-page { @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .panel   { background: rgb(var(--panel));   border: 1px solid rgba(var(--border),.08); border-radius: var(--radius); }
+  .panel-2 { background: rgb(var(--panel-2)); border: 1px solid rgba(var(--border),.08); border-radius: var(--radius); }
+}
 
-@layer utilities{
-  .container-page{ @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
-  .panel{ background: rgb(var(--panel)); border:1px solid rgba(var(--border),.08); border-radius: var(--radius); }
-  .panel-2{ background: rgb(var(--panel-2)); border:1px solid rgba(var(--border),.08); border-radius: var(--radius); }
+/* ══════════════════════════════════════════════════════
+   TRANSICIÓN suave al cambiar tema
+══════════════════════════════════════════════════════ */
+body, header, .panel, .panel-2,
+input, textarea, select, button {
+  transition: background-color 0.22s ease, border-color 0.22s ease, color 0.18s ease;
+}
+
+/* ══════════════════════════════════════════════════════
+   OVERRIDES MODO CLARO
+   Solo los elementos con colores hardcodeados en style=""
+══════════════════════════════════════════════════════ */
+
+/* ── Header ── */
+html.light header {
+  background: rgba(236,239,246,0.94) !important;
+  border-color: rgba(15,20,40,0.10) !important;
+}
+
+/* Botones del header (carrito, burger, tema) */
+html.light [data-open-cart],
+html.light #menu-toggle,
+html.light #themeToggle {
+  border-color: rgba(15,20,40,0.14) !important;
+  background: rgba(15,20,40,0.04) !important;
+}
+
+/* Iconos SVG del header → oscuros en modo claro */
+html.light [data-open-cart] svg path,
+html.light [data-open-cart] svg circle {
+  stroke: rgba(15,20,40,0.75) !important;
+}
+html.light [data-open-cart] svg circle[fill] {
+  fill: rgba(15,20,40,0.75) !important;
+}
+html.light #menu-toggle .burger-line {
+  background: rgb(15,20,40) !important;
+}
+/* Icono luna/sol: siempre visible */
+html.light #themeToggle #iconSun { display: none !important; }
+html.light #themeToggle #iconMoon {
+  display: block !important;
+}
+html.light #themeToggle #iconMoon path {
+  stroke: rgba(15,20,40,0.80) !important;
+}
+
+/* Badge carrito */
+html.light #cartBadge {
+  background: #1e88e5 !important;
+  color: #fff !important;
+}
+
+/* ── Nav links ── */
+html.light nav a[style*="rgba(229,229,229,0.65)"] {
+  color: rgba(15,20,40,0.60) !important;
+}
+html.light nav a[style*="color:#e5e5e5"] {
+  color: rgb(15,20,40) !important;
+}
+
+/* ── Menú mobile ── */
+html.light #mobile-menu nav {
+  background: rgb(250,251,255) !important;
+}
+html.light #mobile-menu a {
+  color: rgba(15,20,40,0.65) !important;
+}
+html.light #mobile-menu a[style*="color:#e5e5e5"] {
+  color: rgb(15,20,40) !important;
+}
+
+/* ── Paneles con fondo hardcodeado ── */
+html.light [style*="background:#151a22"],
+html.light [style*="background: #151a22"] {
+  background: rgb(246,248,253) !important;
+  border-color: rgba(15,20,40,0.10) !important;
+}
+html.light [style*="background: rgba(255,255,255,0.03)"],
+html.light [style*="background:rgba(255,255,255,0.03)"] {
+  background: rgba(30,136,229,0.04) !important;
+  border-color: rgba(30,136,229,0.14) !important;
+}
+html.light [style*="background: rgba(21,26,34,0.7)"],
+html.light [style*="background:rgba(21,26,34,0.7)"],
+html.light [style*="background: rgba(21,26,34"],
+html.light [style*="background:rgba(21,26,34"] {
+  background: rgb(232,235,244) !important;
+  border-color: rgba(15,20,40,0.08) !important;
+}
+
+/* ── Inputs ── */
+html.light [style*="background:#0f1115"],
+html.light [style*="background: #0f1115"] {
+  background: rgb(224,228,240) !important;
+  border-color: rgba(15,20,40,0.16) !important;
+  color: rgb(15,20,40) !important;
+}
+html.light input,
+html.light textarea,
+html.light select {
+  color: rgb(15,20,40) !important;
+}
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: rgba(15,20,40,0.38) !important;
+}
+
+/* ── Textos hardcodeados ── */
+html.light [style*="color:#e5e5e5"],
+html.light [style*="color: #e5e5e5"]              { color: rgb(15,20,40)              !important; }
+html.light [style*="color: rgba(229,229,229,0.85)"],
+html.light [style*="color:rgba(229,229,229,0.85)"] { color: rgba(15,20,40,0.88)        !important; }
+html.light [style*="color: rgba(229,229,229,0.75)"],
+html.light [style*="color:rgba(229,229,229,0.75)"] { color: rgba(15,20,40,0.75)        !important; }
+html.light [style*="color: rgba(229,229,229,0.65)"],
+html.light [style*="color:rgba(229,229,229,0.65)"] { color: rgba(15,20,40,0.62)        !important; }
+html.light [style*="color: rgba(229,229,229,0.55)"],
+html.light [style*="color:rgba(229,229,229,0.55)"] { color: rgba(15,20,40,0.52)        !important; }
+html.light [style*="color: rgba(229,229,229,0.50)"],
+html.light [style*="color:rgba(229,229,229,0.50)"] { color: rgba(15,20,40,0.48)        !important; }
+html.light [style*="color: rgba(229,229,229,0.45)"],
+html.light [style*="color:rgba(229,229,229,0.45)"] { color: rgba(15,20,40,0.42)        !important; }
+html.light [style*="color: rgba(229,229,229,0.35)"],
+html.light [style*="color:rgba(229,229,229,0.35)"] { color: rgba(15,20,40,0.32)        !important; }
+
+/* Precios y números destacados */
+html.light [style*="color: rgb(var(--text))"],
+html.light [style*="color:rgb(var(--text))"]       { color: rgb(15,20,40)              !important; }
+
+/* ── Cards de producto ── */
+html.light [data-product-card] {
+  background: rgb(246,248,253) !important;
+  border-color: rgba(15,20,40,0.10) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06) !important;
+}
+html.light [data-product-card]:hover {
+  box-shadow: 0 8px 28px rgba(0,0,0,0.12) !important;
+}
+/* Gradiente inferior de imagen en cards */
+html.light [style*="rgba(21,26,34,0), rgba(21,26,34,0.95)"] {
+  background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.95)) !important;
+}
+
+/* ── Article content (blog) ── */
+html.light .article-content            { color: rgba(15,20,40,0.82) !important; }
+html.light .article-content p          { color: rgba(15,20,40,0.78) !important; }
+html.light .article-content h2,
+html.light .article-content h3,
+html.light .article-content h4         { color: rgb(10,15,30)        !important; border-color: rgba(15,20,40,0.10) !important; }
+html.light .article-content blockquote {
+  background: rgba(30,136,229,0.05)  !important;
+  color: rgba(15,20,40,0.75)          !important;
+}
+html.light .article-content pre {
+  background: rgb(241,243,249)        !important;
+  border-color: rgba(15,20,40,0.10)   !important;
+  color: rgba(15,20,40,0.85)          !important;
+}
+html.light .article-content code {
+  background: rgba(30,136,229,0.08)   !important;
+  color: rgb(14,100,195)              !important;
+}
+
+/* ── Toast carrito en modo claro ── */
+html.light #zg-cart-toast {
+  background: rgba(246,248,253,0.98)  !important;
+  border-color: rgba(34,197,94,0.30)  !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+}
+html.light #zg-cart-toast p:nth-child(2) {
+  color: rgba(15,20,40,0.55) !important;
+}
+html.light #zg-cart-toast button {
+  color: rgba(15,20,40,0.35) !important;
+}
+/* ══════════════════════════════════════════════════════
+   MODO CLARO — CARRITO DRAWER
+══════════════════════════════════════════════════════ */
+html.light #zgCartDrawer {
+  background: rgb(246,248,253) !important;
+  border-color: rgba(15,20,40,0.10) !important;
+}
+html.light #zgCartClose {
+  border-color: rgba(15,20,40,0.14) !important;
+  color: rgb(15,20,40) !important;
+  background: rgba(15,20,40,0.04) !important;
+}
+html.light #zgCartBody {
+  color: rgb(15,20,40) !important;
+}
+/* Ítems del carrito generados dinámicamente vía JS */
+html.light #zgCartBody * {
+  border-color: rgba(15,20,40,0.10) !important;
+}
+html.light #zgCartTotal {
+  color: rgb(15,20,40) !important;
+}
+html.light #zgCartOverlay {
+  background: rgba(15,20,40,0.35) !important;
+}
+/* Cabecera y pie del drawer */
+html.light #zgCartDrawer > div:first-child {
+  border-bottom-color: rgba(15,20,40,0.08) !important;
+  background: rgb(240,243,252) !important;
+}
+html.light #zgCartDrawer > div:last-child {
+  border-top-color: rgba(15,20,40,0.08) !important;
+  background: rgb(240,243,252) !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODO CLARO — FILTROS Y PAGINACIÓN
+══════════════════════════════════════════════════════ */
+html.light input[class*="bg-white"],
+html.light select[class*="bg-white"] {
+  background: rgb(224,228,240) !important;
+  border-color: rgba(15,20,40,0.16) !important;
+  color: rgb(15,20,40) !important;
+}
+html.light nav a[class*="border-white"],
+html.light nav a[class*="bg-white"] {
+  background: rgb(224,228,240) !important;
+  border-color: rgba(15,20,40,0.16) !important;
+  color: rgb(15,20,40) !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODO CLARO — FOOTER
+══════════════════════════════════════════════════════ */
+html.light footer {
+  background: rgb(228,232,244) !important;
+  border-color: rgba(15,20,40,0.08) !important;
+}
+html.light footer [style*="color:#e5e5e5"],
+html.light footer [style*="color: #e5e5e5"] {
+  color: rgb(15,20,40) !important;
+}
+html.light footer [style*="color: rgba(229,229,229"],
+html.light footer [style*="color:rgba(229,229,229"] {
+  color: rgba(15,20,40,0.62) !important;
+}
+html.light footer [style*="background:#151a22"],
+html.light footer [style*="background: #151a22"] {
+  background: rgb(214,218,235) !important;
+}
+html.light footer a {
+  color: rgba(15,20,40,0.65) !important;
+}
+html.light footer a:hover {
+  color: rgb(30,136,229) !important;
+}
+html.light footer [style*="border-color: rgba(255,255,255,"],
+html.light footer [style*="border:1px solid rgba(255,255,255,"] {
+  border-color: rgba(15,20,40,0.10) !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   MODO CLARO — SECCIONES HARDCODEADAS (Home, Hero…)
+══════════════════════════════════════════════════════ */
+/* Cualquier borde blanco residual */
+html.light [style*="border: 1px solid rgba(255,255,255,0.08)"],
+html.light [style*="border:1px solid rgba(255,255,255,0.08)"] {
+  border-color: rgba(15,20,40,0.10) !important;
+}
+html.light [style*="border: 1px solid rgba(255,255,255,0.07)"],
+html.light [style*="border:1px solid rgba(255,255,255,0.07)"] {
+  border-color: rgba(15,20,40,0.08) !important;
+}
+html.light [style*="border: 1px solid rgba(255,255,255,0.10)"],
+html.light [style*="border:1px solid rgba(255,255,255,0.10)"] {
+  border-color: rgba(15,20,40,0.12) !important;
+}
+html.light [style*="border: 1px solid rgba(255,255,255,0.12)"],
+html.light [style*="border:1px solid rgba(255,255,255,0.12)"] {
+  border-color: rgba(15,20,40,0.13) !important;
+}
+
+/* Paneles panel / panel-2 heredan color de texto */
+html.light .panel,
+html.light .panel-2 {
+  color: rgb(15,20,40) !important;
+}
+
+/* Empty state */
+html.light [style*="background: #151a22"][data-filter-empty],
+html.light [data-filter-empty] {
+  background: rgb(240,243,252) !important;
+  border-color: rgba(15,20,40,0.08) !important;
 }

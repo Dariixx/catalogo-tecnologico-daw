@@ -10,29 +10,34 @@ const abs = (u) => {
   return `${String(STRAPI_URL).replace(/\/$/, "")}${u.startsWith("/") ? "" : "/"}${u}`;
 };
 
-let cats = [];
+let cats  = [];
 let prods = [];
-let arts = [];
+let arts  = [];
 
 try {
   const [cRes, pRes, aRes] = await Promise.all([
     fetch(`${STRAPI_URL}/api/categories?sort=name:asc&pagination[pageSize]=3`),
-    fetch(`${STRAPI_URL}/api/products?sort=createdAt:desc&pagination[pageSize]=3&populate=*`),
-    fetch(`${STRAPI_URL}/api/articles?sort=publishedAt:desc&pagination[pageSize]=3&populate=*`),
+    fetch(`${STRAPI_URL}/api/products?sort=createdAt:desc&pagination[pageSize]=3&populate[0]=images&populate[1]=category`),
+    fetch(`${STRAPI_URL}/api/articles?sort=publishedAt:desc&pagination[pageSize]=3&populate[0]=cover&populate[1]=category`),
   ]);
 
   const c = await cRes.json();
   const p = await pRes.json();
   const a = await aRes.json();
 
-  cats = pick(c?.data, 3).map((x) => x?.attributes ?? x);
+  cats  = pick(c?.data, 3).map((x) => x?.attributes ?? x);
   prods = pick(p?.data, 3).map((x) => x?.attributes ?? x);
-  arts = pick(a?.data, 3).map((x) => x?.attributes ?? x);
+  arts  = pick(a?.data, 3).map((x) => x?.attributes ?? x);
 } catch {
-  cats = [];
-  prods = [];
-  arts = [];
+  cats = []; prods = []; arts = [];
 }
+
+const reviews = [
+  { name: "Carlos M.",    stars: 5, text: "Pedido llegó en 2 días, el producto exactamente como se describe. Muy recomendable.", product: "Ratón Logitech G Pro" },
+  { name: "Laura P.",     stars: 5, text: "La atención al cliente es excelente, me ayudaron a elegir el modelo correcto.", product: "Auriculares ANC" },
+  { name: "Javier R.",    stars: 4, text: "Buena relación calidad-precio y envío rápido. Repetiré sin duda.", product: "Hub USB-C" },
+  { name: "Ana González", stars: 5, text: "Todo perfecto. La web es fácil de navegar y los precios son competitivos.", product: "Teclado mecánico" },
+];
 ---
 
 <BaseLayout
@@ -41,8 +46,6 @@ try {
 >
 
 <style>
-  
-
   .badge-dot {
     width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
     background: rgb(var(--brand-2));
@@ -64,168 +67,179 @@ try {
     transition: transform .35s ease;
   }
   .art-card:hover::before { transform: scaleX(1); }
+
+  .trust-card { transition: border-color .2s, transform .2s; }
+  .trust-card:hover { transform: translateY(-2px); border-color: rgba(30,136,229,0.25) !important; }
+
+  .star { color: #facc15; }
+  .review-card { transition: border-color .2s, transform .2s; }
+  .review-card:hover { transform: translateY(-2px); border-color: rgba(30,136,229,0.2) !important; }
 </style>
 
   <div class="container-page">
 
-    <!-- ══════════════════════════════════════
-         HERO
-    ══════════════════════════════════════ -->
+    <!-- ══ HERO ══ -->
     <section class="panel mt-8 overflow-hidden">
-
       <div class="px-10 pt-14 pb-12 sm:px-16 sm:pt-16 sm:pb-14">
-
-        <!-- Badge -->
         <div class="inline-flex items-center gap-2 mb-8 rounded-full px-3.5 py-1.5 font-body text-[.7rem] font-medium tracking-widest uppercase"
-          style="border: 1px solid rgba(var(--brand),.22);
-                 background: rgba(var(--brand),.06);
-                 color: rgb(var(--brand-2));">
+          style="border:1px solid rgba(var(--brand),.22); background:rgba(var(--brand),.06); color:rgb(var(--brand-2));">
           <span class="badge-dot"></span>
           ZetaGadget
         </div>
 
-        <!-- Heading + sub en dos columnas en desktop -->
         <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between lg:gap-12">
-
           <h1 class="font-display font-extrabold leading-[1.06] tracking-[-0.03em]"
-            style="font-size: clamp(2.6rem, 5vw, 4rem); color: rgb(var(--text));">
+            style="font-size:clamp(2.6rem,5vw,4rem); color:rgb(var(--text));">
             Tecnología con criterio.<br>
-            <span style="color: rgb(var(--brand-2));">Sin humo.</span>
+            <span style="color:rgb(var(--brand-2));">Sin humo.</span>
           </h1>
 
           <div class="mt-5 lg:mt-0 lg:max-w-xs shrink-0">
-            <p class="font-body text-sm font-light leading-relaxed"
-              style="color: rgba(var(--muted),.50);">
-              Catálogo curado, fichas claras y comparativas reales
-              para que compres mejor — sin ruido, sin relleno.
+            <p class="font-body text-sm font-light leading-relaxed" style="color:rgba(var(--muted),.50);">
+              Catálogo curado, fichas claras y comparativas reales para que compres mejor — sin ruido, sin relleno.
             </p>
-
             <div class="mt-5 flex flex-wrap gap-2.5">
               <a href="/productos/"
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-body text-sm font-semibold
-                       transition-all duration-200 hover:-translate-y-px"
-                style="background: rgb(var(--brand)); color: rgb(var(--bg));"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-body text-sm font-semibold transition-all duration-200 hover:-translate-y-px"
+                style="background:rgb(var(--brand)); color:rgb(var(--bg));"
                 onmouseover="this.style.filter='brightness(1.1)'; this.style.boxShadow='0 6px 24px rgba(var(--brand),.35)'"
                 onmouseout="this.style.filter=''; this.style.boxShadow=''">
                 Ver catálogo
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5"
-                    stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </a>
               <a href="/blog/"
-                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-body text-sm
-                       transition-all duration-200 hover:-translate-y-px"
-                style="background: rgba(var(--border),.04);
-                       color: rgba(var(--text),.55);
-                       border: 1px solid rgba(var(--border),.10);"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-body text-sm transition-all duration-200 hover:-translate-y-px"
+                style="background:rgba(var(--border),.04); color:rgba(var(--text),.55); border:1px solid rgba(var(--border),.10);"
                 onmouseover="this.style.borderColor='rgba(var(--border),.18)'; this.style.color='rgb(var(--text))'"
                 onmouseout="this.style.borderColor='rgba(var(--border),.10)'; this.style.color='rgba(var(--text),.55)'">
                 Leer blog
               </a>
             </div>
           </div>
-
         </div>
       </div>
 
       <!-- Stats strip -->
-      <div class="grid grid-cols-3 font-body"
-        style="border-top: 1px solid rgba(var(--border),.08);">
+      <div class="grid grid-cols-3 font-body" style="border-top:1px solid rgba(var(--border),.08);">
         {[
           { num: "+300", label: "Productos analizados" },
           { num: "100%", label: "Sin patrocinadores"   },
           { num: "0 €",  label: "Coste de consulta"    },
         ].map((s, i) => (
           <div class="px-10 py-5 flex flex-col gap-1 sm:px-16"
-            style={i > 0 ? 'border-left: 1px solid rgba(var(--border),.08);' : ''}>
-            <span class="font-display font-extrabold tracking-tight"
-              style="font-size: 1.4rem; color: rgb(var(--text));">{s.num}</span>
-            <span class="text-xs" style="color: rgba(var(--muted),.35);">{s.label}</span>
+            style={i > 0 ? "border-left:1px solid rgba(var(--border),.08);" : ""}>
+            <span class="font-display font-extrabold tracking-tight" style="font-size:1.4rem; color:rgb(var(--text));">{s.num}</span>
+            <span class="text-xs" style="color:rgba(var(--muted),.35);">{s.label}</span>
           </div>
         ))}
       </div>
-
     </section>
 
 
-    <!-- ══════════════════════════════════════
-         MAIN CONTENT
-    ══════════════════════════════════════ -->
     <main class="py-12 space-y-16">
 
-      <!-- CATEGORÍAS -->
+      <!-- ══ CONFIANZA ══ -->
+      <section>
+        <div class="mb-6">
+          <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5" style="color:rgb(var(--brand));">Por qué elegirnos</p>
+          <h2 class="font-display text-xl font-bold tracking-tight" style="color:rgb(var(--text));">Compra con total seguridad</h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke="#3aa0ff" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+              title: "Selección curada",
+              desc: "Solo productos que hemos analizado. Sin relleno ni afiliados pagados.",
+            },
+            {
+              icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="#3aa0ff" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#3aa0ff" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+              title: "Pago seguro",
+              desc: "Conexión cifrada SSL. Tus datos nunca se almacenan ni comparten.",
+            },
+            {
+              icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M12 5l7 7-7 7" stroke="#3aa0ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6l2-2 2 2M3 18l2 2 2-2" stroke="#3aa0ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+              title: "Envío rápido",
+              desc: "Entrega en 24–48h en Península. Seguimiento en tiempo real.",
+            },
+            {
+              icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 9h18M3 9V6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v3M3 9l2 11h14l2-11" stroke="#3aa0ff" stroke-width="1.5" stroke-linecap="round"/><path d="M9 13l2 2 4-4" stroke="#3aa0ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+              title: "Devolución fácil",
+              desc: "30 días para devolver sin preguntas. Reembolso garantizado.",
+            },
+          ].map((item) => (
+            <div class="trust-card rounded-2xl p-5 flex flex-col gap-3"
+              style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+              <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style="background:rgba(30,136,229,0.09); border:1px solid rgba(30,136,229,0.18);"
+                set:html={item.icon}>
+              </span>
+              <div>
+                <p class="text-sm font-semibold" style="color:#e5e5e5;">{item.title}</p>
+                <p class="mt-1 text-xs leading-relaxed" style="color:rgba(229,229,229,0.50);">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+
+      <!-- ══ CATEGORÍAS ══ -->
       <section>
         <div class="flex items-end justify-between mb-6">
           <div>
-            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5"
-              style="color: rgb(var(--brand));">Explorar</p>
-            <h2 class="font-display text-xl font-bold tracking-tight"
-              style="color: rgb(var(--text));">Categorías destacadas</h2>
+            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5" style="color:rgb(var(--brand));">Explorar</p>
+            <h2 class="font-display text-xl font-bold tracking-tight" style="color:rgb(var(--text));">Categorías destacadas</h2>
           </div>
-          <a href="/categorias/"
-            class="font-body text-sm transition-colors duration-150"
-            style="color: rgba(var(--muted),.38);"
+          <a href="/categorias/" class="font-body text-sm transition-colors duration-150"
+            style="color:rgba(var(--muted),.38);"
             onmouseover="this.style.color='rgb(var(--brand-2))'"
-            onmouseout="this.style.color='rgba(var(--muted),.38)'">
-            Ver todas →
-          </a>
+            onmouseout="this.style.color='rgba(var(--muted),.38)'">Ver todas →</a>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 rounded-2xl overflow-hidden"
-          style="border: 1px solid rgba(var(--border),.08);">
+        <div class="grid grid-cols-1 sm:grid-cols-3 rounded-2xl overflow-hidden" style="border:1px solid rgba(var(--border),.08);">
           {cats.length > 0 ? cats.map((c, i) => (
             <a href={`/categorias/${c.slug}/`}
               class="relative block px-7 py-7 transition-colors duration-150"
-              style={`background: rgb(var(--panel)); ${i > 0 ? 'border-left: 1px solid rgba(var(--border),.08);' : ''}`}
+              style={`background:rgb(var(--panel)); ${i > 0 ? "border-left:1px solid rgba(var(--border),.08);" : ""}`}
               onmouseover="this.style.background='rgb(var(--panel-2))'"
               onmouseout="this.style.background='rgb(var(--panel))'">
               <div class="mb-4 w-8 h-8 rounded-xl flex items-center justify-center text-sm"
-                style="background: rgba(var(--brand),.09);
-                       border: 1px solid rgba(var(--brand),.18);
-                       color: rgb(var(--brand-2));">
+                style="background:rgba(var(--brand),.09); border:1px solid rgba(var(--brand),.18); color:rgb(var(--brand-2));">
                 {["◈","◉","◎"][i]}
               </div>
-              <div class="font-display font-semibold text-sm"
-                style="color: rgb(var(--text));">{c.name}</div>
+              <div class="font-display font-semibold text-sm" style="color:rgb(var(--text));">{c.name}</div>
               {c.description && (
-                <p class="font-body mt-2 text-xs leading-relaxed"
-                  style="color: rgba(var(--muted),.48);">{c.description}</p>
+                <p class="font-body mt-2 text-xs leading-relaxed" style="color:rgba(var(--muted),.48);">{c.description}</p>
               )}
-              <span class="absolute bottom-5 right-5 text-sm"
-                style="color: rgba(var(--muted),.20);">↗</span>
+              <span class="absolute bottom-5 right-5 text-sm" style="color:rgba(var(--muted),.20);">↗</span>
             </a>
           )) : (
-            <p class="font-body px-7 py-7 text-sm col-span-3"
-              style="color: rgba(var(--muted),.30);">Sin categorías disponibles.</p>
+            <p class="font-body px-7 py-7 text-sm col-span-3" style="color:rgba(var(--muted),.30);">Sin categorías.</p>
           )}
         </div>
       </section>
 
 
-      <!-- PRODUCTOS -->
+      <!-- ══ PRODUCTOS ══ -->
       <section>
         <div class="flex items-end justify-between mb-6">
           <div>
-            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5"
-              style="color: rgb(var(--brand));">Selección</p>
-            <h2 class="font-display text-xl font-bold tracking-tight"
-              style="color: rgb(var(--text));">Productos recientes</h2>
+            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5" style="color:rgb(var(--brand));">Selección</p>
+            <h2 class="font-display text-xl font-bold tracking-tight" style="color:rgb(var(--text));">Productos recientes</h2>
           </div>
-          <a href="/productos/"
-            class="font-body text-sm transition-colors duration-150"
-            style="color: rgba(var(--muted),.38);"
+          <a href="/productos/" class="font-body text-sm transition-colors duration-150"
+            style="color:rgba(var(--muted),.38);"
             onmouseover="this.style.color='rgb(var(--brand-2))'"
-            onmouseout="this.style.color='rgba(var(--muted),.38)'">
-            Ver todos →
-          </a>
+            onmouseout="this.style.color='rgba(var(--muted),.38)'">Ver todos →</a>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {prods.length > 0 ? prods.map((p) => {
             const img =
+              p.images?.[0]?.formats?.large?.url ??
+              p.images?.[0]?.formats?.medium?.url ??
               p.images?.[0]?.formats?.small?.url ??
-              p.images?.[0]?.formats?.thumbnail?.url ??
               p.images?.[0]?.url ?? null;
             const imgAbs = img ? abs(img) : null;
             return (
@@ -233,59 +247,91 @@ try {
                 class="prod-card panel block overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
                 onmouseover="this.style.borderColor='rgba(var(--brand),.28)'; this.style.boxShadow='0 16px 44px rgba(0,0,0,.40)'"
                 onmouseout="this.style.borderColor='rgba(var(--border),.08)'; this.style.boxShadow='none'">
-                <div class="prod-img aspect-[4/3] overflow-hidden"
-                  style="background: rgba(var(--border),.025);">
+                <div class="prod-img aspect-[4/3] overflow-hidden" style="background:rgba(var(--border),.025);">
                   {imgAbs
-                    ? <img src={imgAbs} alt={p.name} class="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-[1.03]"/>
-                    : <div class="w-full h-full flex items-center justify-center text-xs"
-                        style="color: rgba(var(--muted),.22);">Sin imagen</div>
+                    ? <img src={imgAbs} alt={p.name} class="w-full h-full object-contain p-4" loading="lazy"/>
+                    : <div class="w-full h-full flex items-center justify-center text-xs" style="color:rgba(var(--muted),.22);">Sin imagen</div>
                   }
                 </div>
                 <div class="p-6">
-                  <div class="font-display font-semibold text-sm leading-snug"
-                    style="color: rgb(var(--text));">{p.name}</div>
+                  <div class="font-display font-semibold text-sm leading-snug" style="color:rgb(var(--text));">{p.name}</div>
                   {p.shortDescription && (
-                    <p class="font-body mt-2 text-xs leading-relaxed line-clamp-2"
-                      style="color: rgba(var(--muted),.48);">{p.shortDescription}</p>
+                    <p class="font-body mt-2 text-xs leading-relaxed line-clamp-2" style="color:rgba(var(--muted),.48);">{p.shortDescription}</p>
                   )}
                   <div class="mt-5 flex items-center justify-between">
                     {typeof p.price === "number"
-                      ? <span class="font-display font-extrabold text-base tracking-tight"
-                          style="color: rgb(var(--text));">
+                      ? <span class="font-display font-extrabold text-base tracking-tight" style="color:rgb(var(--text));">
                           {new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(p.price)}
                         </span>
                       : <span/>
                     }
-                    <span class="font-body text-xs font-medium"
-                      style="color: rgb(var(--brand-2));">Ver ficha →</span>
+                    <span class="font-body text-xs font-medium" style="color:rgb(var(--brand-2));">Ver ficha →</span>
                   </div>
                 </div>
               </a>
             );
           }) : (
-            <p class="font-body text-sm col-span-3"
-              style="color: rgba(var(--muted),.30);">Sin productos disponibles.</p>
+            <p class="font-body text-sm col-span-3" style="color:rgba(var(--muted),.30);">Sin productos disponibles.</p>
           )}
         </div>
       </section>
 
 
-      <!-- BLOG -->
+      <!-- ══ RESEÑAS ══ -->
+      <section>
+        <div class="mb-6">
+          <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5" style="color:rgb(var(--brand));">Clientes</p>
+          <h2 class="font-display text-xl font-bold tracking-tight" style="color:rgb(var(--text));">Lo que dicen nuestros clientes</h2>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {reviews.map((r) => (
+            <div class="review-card rounded-2xl p-5 flex flex-col gap-3"
+              style="background:#151a22; border:1px solid rgba(255,255,255,0.08);">
+              <!-- Estrellas -->
+              <div class="flex gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill={i < r.stars ? "#facc15" : "none"} style={i < r.stars ? "" : "opacity:0.2"}>
+                    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke="#facc15" stroke-width="1.3" stroke-linejoin="round"/>
+                  </svg>
+                ))}
+              </div>
+              <p class="text-sm leading-relaxed flex-1" style="color:rgba(229,229,229,0.72);">"{r.text}"</p>
+              <div>
+                <p class="text-sm font-semibold" style="color:#e5e5e5;">{r.name}</p>
+                <p class="text-xs mt-0.5" style="color:rgba(229,229,229,0.35);">Compró: {r.product}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <!-- Rating global -->
+        <div class="mt-6 rounded-2xl px-6 py-4 flex flex-wrap items-center gap-4"
+          style="background:rgba(250,204,21,0.04); border:1px solid rgba(250,204,21,0.12);">
+          <div class="flex items-center gap-2">
+            <span class="font-display font-extrabold text-2xl" style="color:#facc15;">4.9</span>
+            <div class="flex gap-0.5">
+              {Array.from({ length: 5 }).map(() => (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#facc15"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke="#facc15" stroke-width="1.2" stroke-linejoin="round"/></svg>
+              ))}
+            </div>
+          </div>
+          <p class="text-sm" style="color:rgba(229,229,229,0.50);">Basado en +120 opiniones verificadas de clientes reales.</p>
+        </div>
+      </section>
+
+
+      <!-- ══ BLOG ══ -->
       <section>
         <div class="flex items-end justify-between mb-6">
           <div>
-            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5"
-              style="color: rgb(var(--brand));">Blog</p>
-            <h2 class="font-display text-xl font-bold tracking-tight"
-              style="color: rgb(var(--text));">Artículos clave</h2>
+            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-1.5" style="color:rgb(var(--brand));">Blog</p>
+            <h2 class="font-display text-xl font-bold tracking-tight" style="color:rgb(var(--text));">Artículos clave</h2>
           </div>
-          <a href="/blog/"
-            class="font-body text-sm transition-colors duration-150"
-            style="color: rgba(var(--muted),.38);"
+          <a href="/blog/" class="font-body text-sm transition-colors duration-150"
+            style="color:rgba(var(--muted),.38);"
             onmouseover="this.style.color='rgb(var(--brand-2))'"
-            onmouseout="this.style.color='rgba(var(--muted),.38)'">
-            Ver blog →
-          </a>
+            onmouseout="this.style.color='rgba(var(--muted),.38)'">Ver blog →</a>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -294,30 +340,62 @@ try {
               class="art-card panel-2 block px-7 py-7 transition-all duration-200 hover:-translate-y-0.5"
               onmouseover="this.style.borderColor='rgba(var(--border),.16)'"
               onmouseout="this.style.borderColor='rgba(var(--border),.08)'">
-              <div class="font-body text-[.65rem] font-semibold tracking-widest mb-4 uppercase"
-                style="color: rgba(var(--muted),.22);">0{i+1}</div>
-              <div class="font-display font-semibold text-sm leading-snug"
-                style="color: rgb(var(--text));">{a.title}</div>
+              <div class="font-body text-[.65rem] font-semibold tracking-widest mb-4 uppercase" style="color:rgba(var(--muted),.22);">0{i+1}</div>
+              <div class="font-display font-semibold text-sm leading-snug" style="color:rgb(var(--text));">{a.title}</div>
               {(a.description ?? a.excerpt) && (
-                <p class="font-body mt-2.5 text-xs leading-relaxed line-clamp-3"
-                  style="color: rgba(var(--muted),.48);">
+                <p class="font-body mt-2.5 text-xs leading-relaxed line-clamp-3" style="color:rgba(var(--muted),.48);">
                   {a.description ?? a.excerpt}
                 </p>
               )}
-              <span class="font-body mt-5 inline-flex items-center gap-1 text-xs font-medium"
-                style="color: rgb(var(--brand-2));">
+              <span class="font-body mt-5 inline-flex items-center gap-1 text-xs font-medium" style="color:rgb(var(--brand-2));">
                 Leer artículo →
               </span>
             </a>
           )) : (
-            <p class="font-body text-sm col-span-3"
-              style="color: rgba(var(--muted),.30);">Sin artículos disponibles.</p>
+            <p class="font-body text-sm col-span-3" style="color:rgba(var(--muted),.30);">Sin artículos disponibles.</p>
           )}
         </div>
       </section>
 
+
+      <!-- ══ BANNER CONFIANZA FINAL ══ -->
+      <section>
+        <div class="rounded-3xl px-8 py-10 sm:px-14 sm:py-12 flex flex-col sm:flex-row items-center justify-between gap-6 overflow-hidden"
+          style="background: linear-gradient(135deg, rgba(30,136,229,0.12) 0%, rgba(21,26,34,1) 60%); border:1px solid rgba(30,136,229,0.18);">
+          <div>
+            <p class="font-body text-[.7rem] font-semibold uppercase tracking-widest mb-2" style="color:#3aa0ff;">Garantía ZetaGadget</p>
+            <h3 class="font-display text-xl sm:text-2xl font-extrabold" style="color:#e5e5e5;">
+              Tu satisfacción, nuestra prioridad
+            </h3>
+            <p class="mt-2 text-sm leading-relaxed max-w-md" style="color:rgba(229,229,229,0.50);">
+              Todos los productos pasan por una revisión editorial. Si no quedas satisfecho, te devolvemos el dinero — sin letra pequeña.
+            </p>
+          </div>
+          <div class="flex flex-col sm:items-end gap-3 shrink-0">
+            <div class="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#4ade80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="#4ade80" stroke-width="1.5"/></svg>
+              <span class="text-sm" style="color:rgba(229,229,229,0.65);">30 días de devolución</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#4ade80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="#4ade80" stroke-width="1.5"/></svg>
+              <span class="text-sm" style="color:rgba(229,229,229,0.65);">Pago cifrado SSL</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4" stroke="#4ade80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="#4ade80" stroke-width="1.5"/></svg>
+              <span class="text-sm" style="color:rgba(229,229,229,0.65);">Soporte en 24–48h</span>
+            </div>
+            <a href="/contacto/"
+              class="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+              style="background:#1e88e5; color:#fff;"
+              onmouseover="this.style.filter='brightness(1.1)'"
+              onmouseout="this.style.filter=''">
+              Contactar
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
     </main>
-
   </div>
-
 </BaseLayout>

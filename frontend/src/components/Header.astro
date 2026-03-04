@@ -16,6 +16,7 @@ const isActiveLink = (href) =>
 >
   <div class="container-page">
     <div class="flex items-center justify-between h-20 sm:h-24 py-3 gap-3">
+
       <!-- Logo -->
       <a href="/" class="flex items-center gap-2 shrink-0 group min-w-0" aria-label="ZetaGadget">
         <img
@@ -29,42 +30,47 @@ const isActiveLink = (href) =>
       <nav class="hidden md:flex items-center gap-1">
         {navLinks.map((link) => {
           const active = isActiveLink(link.href);
-
           return (
             <a
               href={link.href}
-              class={`relative px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 group ${
-                active ? "text-white" : "hover:text-white"
-              }`}
+              class={`relative px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 group ${active ? "text-white" : "hover:text-white"}`}
               style={active ? "color:#e5e5e5;" : "color: rgba(229,229,229,0.65);"}
               aria-current={active ? "page" : undefined}
             >
-              <span
-                class="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                style="background: rgba(30,136,229,0.08);"
-              ></span>
-
+              <span class="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200" style="background: rgba(30,136,229,0.08);"></span>
               <span class="relative z-10">{link.label}</span>
-
-              {active ? (
-                <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-5 rounded-full"
-                  style="background:#1e88e5;"
-                ></span>
-              ) : (
-                <span
-                  class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full group-hover:w-5 transition-all duration-200"
-                  style="background:#3aa0ff;"
-                ></span>
-              )}
+              {active
+                ? <span class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-5 rounded-full" style="background:#1e88e5;"></span>
+                : <span class="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full group-hover:w-5 transition-all duration-200" style="background:#3aa0ff;"></span>
+              }
             </a>
           );
         })}
       </nav>
 
-      <!-- Right (Desktop + Mobile) -->
-      <div class="flex items-center gap-3 shrink-0">
-        <!-- Carrito (siempre visible) -->
+      <!-- Right -->
+      <div class="flex items-center gap-2 shrink-0">
+
+        <!-- Toggle tema claro/oscuro -->
+        <button
+          id="themeToggle"
+          type="button"
+          aria-label="Cambiar tema"
+          class="w-9 h-9 sm:w-10 sm:h-10 grid place-items-center rounded-lg transition-colors duration-200"
+          style="border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);"
+        >
+          <!-- Sol (visible en modo oscuro) -->
+          <svg id="iconSun" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" stroke="rgba(229,229,229,0.9)" stroke-width="1.6"/>
+            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="rgba(229,229,229,0.9)" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <!-- Luna (visible en modo claro) -->
+          <svg id="iconMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="hidden">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="rgba(30,30,30,0.85)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <!-- Carrito -->
         <button
           type="button"
           class="relative w-9 h-9 sm:w-10 sm:h-10 grid place-items-center rounded-lg"
@@ -78,15 +84,10 @@ const isActiveLink = (href) =>
             <circle cx="9" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
             <circle cx="18" cy="20" r="1.5" fill="rgba(229,229,229,0.9)"/>
           </svg>
-
-          <span
-            id="cartBadge"
-            class="absolute -top-2 -right-2 text-xs font-bold px-2 py-0.5 rounded-full hidden"
-            style="background:#1e88e5;color:#fff;"
-          >0</span>
+          <span id="cartBadge" class="absolute -top-2 -right-2 text-xs font-bold px-2 py-0.5 rounded-full hidden" style="background:#1e88e5;color:#fff;">0</span>
         </button>
 
-        <!-- Burger (solo móvil) -->
+        <!-- Burger móvil -->
         <button
           id="menu-toggle"
           class="md:hidden flex flex-col justify-center items-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-colors duration-200 focus:outline-none"
@@ -116,11 +117,9 @@ const isActiveLink = (href) =>
           <a
             href={link.href}
             class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-200"
-            style={
-              active
-                ? "color:#e5e5e5; background: rgba(30,136,229,0.12); border-left:2px solid #1e88e5;"
-                : "color: rgba(229,229,229,0.65);"
-            }
+            style={active
+              ? "color:#e5e5e5; background: rgba(30,136,229,0.12); border-left:2px solid #1e88e5;"
+              : "color: rgba(229,229,229,0.65);"}
             aria-current={active ? "page" : undefined}
           >
             {link.label}
@@ -128,11 +127,10 @@ const isActiveLink = (href) =>
           </a>
         );
       })}
-
       <div class="pt-2 pb-1">
         <a
           href={site.primaryCta.href}
-          class="block text-center px-4 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200"
+          class="block text-center px-4 py-2.5 text-sm font-semibold rounded-lg"
           style="background:#1e88e5; color:#fff;"
         >
           {site.primaryCta.label}
@@ -143,10 +141,10 @@ const isActiveLink = (href) =>
 </header>
 
 <script type="module">
-  // menú mobile
+  // ── Menú mobile ────────────────────────────────────────────────────────────
   const toggle = document.getElementById("menu-toggle");
-  const menu = document.getElementById("mobile-menu");
-  const lines = document.querySelectorAll(".burger-line");
+  const menu   = document.getElementById("mobile-menu");
+  const lines  = document.querySelectorAll(".burger-line");
   let open = false;
 
   toggle?.addEventListener("click", () => {
@@ -173,5 +171,38 @@ const isActiveLink = (href) =>
       lines[1].style.opacity = "1";
       lines[2].style.transform = "";
     });
+  });
+
+  // ── Toggle claro / oscuro ──────────────────────────────────────────────────
+  const btn      = document.getElementById("themeToggle");
+  const iconSun  = document.getElementById("iconSun");
+  const iconMoon = document.getElementById("iconMoon");
+  const root     = document.documentElement;
+
+  // Leer preferencia guardada o del sistema
+  const saved = localStorage.getItem("zeta-theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  let dark = saved ? saved === "dark" : prefersDark;
+
+  function applyTheme(isDark) {
+    if (isDark) {
+      root.classList.add("dark");
+      root.classList.remove("light");
+      iconSun.classList.remove("hidden");
+      iconMoon.classList.add("hidden");
+    } else {
+      root.classList.remove("dark");
+      root.classList.add("light");
+      iconSun.classList.add("hidden");
+      iconMoon.classList.remove("hidden");
+    }
+    localStorage.setItem("zeta-theme", isDark ? "dark" : "light");
+  }
+
+  applyTheme(dark);
+
+  btn?.addEventListener("click", () => {
+    dark = !dark;
+    applyTheme(dark);
   });
 </script>
