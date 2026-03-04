@@ -40,14 +40,10 @@ const links = site.footerLinks;
   </div>
 
   <div style="border-top:1px solid rgba(255,255,255,0.06);">
-    <div class="container-page py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-      <p class="text-xs" style="color: rgba(229,229,229,0.4);">
-        © {year} {brand?.name || site.name}. Todos los derechos reservados.
-      </p>
-      <p class="text-xs flex items-center gap-1" style="color: rgba(229,229,229,0.3);">
-        Hecho con <span class="font-medium" style="color: rgba(229,229,229,0.45);">Astro</span> +{" "}
-        <span class="font-medium" style="color: rgba(229,229,229,0.45);">Strapi</span>
-      </p>
-    </div>
+  <div class="container-page py-4 flex justify-center">
+    <p class="text-xs" style="color: rgba(229,229,229,0.4);">
+      © {year} {brand?.name || site.name}. Todos los derechos reservados.
+    </p>
   </div>
+</div>
 </footer>

@@ -1,300 +1,171 @@
 ---
-
-
-
 import { absoluteUrl } from "../../lib/strapi.js";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { STRAPI_URL } from "../../lib/urls.js";
 
 const url = new URL(Astro.request.url);
-
-const q = url.searchParams.get("q")?.trim() ?? "";
-const cat = url.searchParams.get("cat")?.trim() ?? "";
+const q    = url.searchParams.get("q")?.trim()   ?? "";
+const cat  = url.searchParams.get("cat")?.trim() ?? "";
 const sort = url.searchParams.get("sort")?.trim() ?? "createdAt:desc";
-const min = url.searchParams.get("min")?.trim() ?? "";
-const max = url.searchParams.get("max")?.trim() ?? "";
-const page = Number(url.searchParams.get("page") ?? "1") || 1;
+const min  = url.searchParams.get("min")?.trim() ?? "";
+const max  = url.searchParams.get("max")?.trim() ?? "";
 
-const pageSize = 24;
-
-let products = [];
+// Traemos TODOS los productos (el JS se encarga de paginar client-side)
+let products   = [];
 let categories = [];
-let pageCount = 1;
-let total = 0;
+let total      = 0;
 
 try {
-  // ─────────────────────────────────────────────────────────────────────────
-  // IMPORTANTE: URLSearchParams codifica los corchetes como %5B%5D,
-  // lo que rompe los filtros de Strapi. Usamos strings literales en la QS.
-  // ─────────────────────────────────────────────────────────────────────────
-  const params = [];
+  // Primero obtenemos el total para saber cuántas páginas pedir
+  const firstRes  = await fetch(
+    `${STRAPI_URL}/api/products?pagination[page]=1&pagination[pageSize]=1&populate[images][fields][0]=url`
+  );
+  const firstData = await firstRes.json();
+  total = firstData?.meta?.pagination?.total ?? 0;
 
-  params.push(`pagination[page]=${page}`);
-  params.push(`pagination[pageSize]=${pageSize}`);
-  params.push(`sort=${encodeURIComponent(sort)}`);
-
-  // Populate selectivo (mejor rendimiento que populate=*)
-  params.push("populate[images][fields][0]=url");
-  params.push("populate[images][fields][1]=formats");
-  params.push("populate[images][fields][2]=alternativeText");
-  params.push("populate[category][fields][0]=name");
-  params.push("populate[category][fields][1]=slug");
-
-  // 🔎 búsqueda texto
-  if (q) {
-    params.push(`filters[$or][0][name][$containsi]=${encodeURIComponent(q)}`);
-    params.push(`filters[$or][1][shortDescription][$containsi]=${encodeURIComponent(q)}`);
-  }
-
-  // 📂 categoría
-  if (cat) {
-    params.push(`filters[category][slug][$eq]=${encodeURIComponent(cat)}`);
-  }
-
-  // 💰 precio mínimo / máximo
-  const minN = Number(min);
-  const maxN = Number(max);
-  if (min && Number.isFinite(minN)) params.push(`filters[price][$gte]=${minN}`);
-  if (max && Number.isFinite(maxN)) params.push(`filters[price][$lte]=${maxN}`);
-
-  const qs = params.join("&");
+  // Traemos todos de una sola vez (máx 200 para no sobrecargar)
+  const pageSize = Math.min(total, 200);
 
   const [productsRes, categoriesRes] = await Promise.all([
-    fetch(`${STRAPI_URL}/api/products?${qs}`),
+    fetch(
+      `${STRAPI_URL}/api/products?pagination[page]=1&pagination[pageSize]=${pageSize}&sort=${encodeURIComponent(sort)}&populate[images][fields][0]=url&populate[images][fields][1]=formats&populate[images][fields][2]=alternativeText&populate[category][fields][0]=name&populate[category][fields][1]=slug`
+    ),
     fetch(`${STRAPI_URL}/api/categories?pagination[pageSize]=100&sort=name:asc`),
   ]);
 
-  const productsData = await productsRes.json();
+  const productsData  = await productsRes.json();
   const categoriesData = await categoriesRes.json();
 
-  products = productsData?.data ?? [];
-  pageCount = productsData?.meta?.pagination?.pageCount ?? 1;
-  total = productsData?.meta?.pagination?.total ?? 0;
-
+  products   = productsData?.data ?? [];
   categories = (categoriesData?.data ?? []).map((c) => c?.attributes ?? c);
 } catch {
-  products = [];
-  categories = [];
-  pageCount = 1;
-  total = 0;
+  products = []; categories = [];
 }
 
 const hasFilters = !!(q || cat || min || max || sort !== "createdAt:desc");
-const shownCount = products.length;
-
-const activeCategoryName =
-  cat ? (categories.find((c) => c.slug === cat)?.name ?? null) : null;
-
-const canonical = "/productos/";
-
-const buildPageUrl = (p) =>
-  `/productos/?page=${p}` +
-  (q ? `&q=${encodeURIComponent(q)}` : "") +
-  (cat ? `&cat=${encodeURIComponent(cat)}` : "") +
-  (sort ? `&sort=${encodeURIComponent(sort)}` : "") +
-  (min ? `&min=${encodeURIComponent(min)}` : "") +
-  (max ? `&max=${encodeURIComponent(max)}` : "");
+const activeCategoryName = cat ? (categories.find((c) => c.slug === cat)?.name ?? null) : null;
 ---
 
 <BaseLayout
   title="Productos — ZetaGadget"
   description="Explora nuestro catálogo completo de gadgets y productos tecnológicos."
-  canonical={canonical}
+  canonical="/productos/"
 >
   <main class="container-page py-10">
+
     <!-- Header -->
-    <div
-      class="mb-8 rounded-3xl p-6 sm:p-8"
-      style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
-    >
-      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">
-        Catálogo
-      </p>
-
+    <div class="mb-8 rounded-3xl p-6 sm:p-8"
+      style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+      <p class="text-xs font-semibold uppercase tracking-widest" style="color:#1e88e5;">Catálogo</p>
       <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
-        <h1 class="text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">
-          Productos
-        </h1>
-
-        <span
-          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-          style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
-        >
-          {hasFilters
-            ? <><span data-filter-count>{shownCount}</span>{` resultado${shownCount !== 1 ? "s" : ""}`}</>
-            : <><span data-filter-count>{total}</span>{` producto${total !== 1 ? "s" : ""}`}</>}
+        <h1 class="text-3xl sm:text-4xl font-extrabold" style="color:#e5e5e5;">Productos</h1>
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+          style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);">
+          <span data-filter-count>{total}</span>&nbsp;producto{total !== 1 ? "s" : ""}
         </span>
       </div>
-
       <p class="mt-2 text-sm sm:text-base" style="color: rgba(229,229,229,0.55);">
         Descubre nuestra selección de gadgets y tecnología premium.
       </p>
-
-      {pageCount > 1 && (
-        <p class="mt-2 text-xs" style="color: rgba(229,229,229,0.35);">
-          Página {page} de {pageCount}
-        </p>
-      )}
     </div>
 
     <!-- Filtros -->
     <form class="mb-6 flex gap-3 flex-wrap" method="get" action="/productos/">
-      <input
-        name="q"
-        data-filter-q
-        value={q}
-        placeholder="Buscar producto..."
-        class="px-4 py-2 rounded-xl bg-white/5 border border-white/10"
-      />
-
-      <select name="cat" data-filter-cat class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+      <input name="q" data-filter-q value={q} placeholder="Buscar producto..."
+        class="px-4 py-2 rounded-xl bg-white/5 border border-white/10" style="color:#e5e5e5;" />
+      <select name="cat" data-filter-cat class="px-4 py-2 rounded-xl bg-white/5 border border-white/10" style="color:#e5e5e5;">
         <option value="">Todas las categorías</option>
         {categories.map((c) => (
-          <option value={c.slug} selected={cat === c.slug}>
-            {c.name}
-          </option>
+          <option value={c.slug} selected={cat === c.slug}>{c.name}</option>
         ))}
       </select>
-
-      <select name="sort" data-filter-sort class="px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+      <select name="sort" data-filter-sort class="px-4 py-2 rounded-xl bg-white/5 border border-white/10" style="color:#e5e5e5;">
         <option value="createdAt:desc" selected={sort === "createdAt:desc"}>Más recientes</option>
-        <option value="name:asc" selected={sort === "name:asc"}>A → Z</option>
-        <option value="name:desc" selected={sort === "name:desc"}>Z → A</option>
-        <option value="price:asc" selected={sort === "price:asc"}>Precio ↑</option>
-        <option value="price:desc" selected={sort === "price:desc"}>Precio ↓</option>
+        <option value="name:asc"       selected={sort === "name:asc"}>A → Z</option>
+        <option value="name:desc"      selected={sort === "name:desc"}>Z → A</option>
+        <option value="price:asc"      selected={sort === "price:asc"}>Precio ↑</option>
+        <option value="price:desc"     selected={sort === "price:desc"}>Precio ↓</option>
       </select>
-
-      <input
-        name="min"
-        data-filter-min
-        value={min}
-        inputmode="numeric"
-        placeholder="€ mín"
-        class="w-28 px-4 py-2 rounded-xl bg-white/5 border border-white/10"
-      />
-
-      <input
-        name="max"
-        data-filter-max
-        value={max}
-        inputmode="numeric"
-        placeholder="€ máx"
-        class="w-28 px-4 py-2 rounded-xl bg-white/5 border border-white/10"
-      />
-
+      <input name="min" data-filter-min value={min} inputmode="numeric" placeholder="€ mín"
+        class="w-28 px-4 py-2 rounded-xl bg-white/5 border border-white/10" style="color:#e5e5e5;" />
+      <input name="max" data-filter-max value={max} inputmode="numeric" placeholder="€ máx"
+        class="w-28 px-4 py-2 rounded-xl bg-white/5 border border-white/10" style="color:#e5e5e5;" />
     </form>
 
-    <!-- Chips resumen -->
+    <!-- Chips activos -->
     {(q || activeCategoryName || min || max) && (
-      <div
-        class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
-        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
-      >
+      <div class="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3"
+        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
         <div class="flex flex-wrap items-center gap-2">
           {q && (
             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
-            >
+              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);">
               "{q}"
             </span>
           )}
-
           {activeCategoryName && (
             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
-            >
+              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);">
               {activeCategoryName}
             </span>
           )}
-
           {(min || max) && (
             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);"
-            >
-              Precio: {min || "0"}€ — {max || "∞"}€
+              style="background: rgba(30,136,229,0.10); color: #3aa0ff; border: 1px solid rgba(30,136,229,0.22);">
+              {min || "0"}€ — {max || "∞"}€
             </span>
           )}
         </div>
-
         <a href="/productos/" class="text-xs font-semibold" style="color: rgba(229,229,229,0.55);">
           Limpiar filtros
         </a>
       </div>
     )}
 
-    <!-- Grid productos -->
-    {products.length > 0 ? (
-      <div data-products-grid class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products.map((item) => {
-          const p = item?.attributes ?? item;
+    <!-- Grid — todas las cards en el DOM, el JS gestiona cuáles se ven -->
+    <div data-products-grid class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {products.map((item) => {
+        const p = item?.attributes ?? item;
+        const firstImg =
+          p.images?.[0]?.formats?.small?.url ??
+          p.images?.[0]?.formats?.thumbnail?.url ??
+          p.images?.[0]?.url ?? null;
+        const imageUrl = firstImg ? absoluteUrl(firstImg) : null;
+        const catObj   = p.category ?? null;
+        return (
+          <ProductCard
+            product={{
+              id: item.id ?? p.slug,
+              name: p.name,
+              slug: p.slug,
+              price: p.price,
+              shortDescription: p.shortDescription ?? p.short_description,
+              imageUrl,
+              featured: p.featured ?? false,
+              stock: p.stock ?? 0,
+              category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
+            }}
+          />
+        );
+      })}
+    </div>
 
-          const firstImg =
-            p.images?.[0]?.formats?.small?.url ??
-            p.images?.[0]?.formats?.thumbnail?.url ??
-            p.images?.[0]?.url ??
-            null;
+    <!-- Estado vacío -->
+    <div data-filter-empty class="hidden flex-col items-center text-center py-20 px-6 rounded-3xl"
+      style="background: #151a22; border: 1px solid rgba(255,255,255,0.07); display:none;">
+      <h2 class="text-xl font-semibold mb-2" style="color:#e5e5e5;">Sin resultados para tu búsqueda</h2>
+      <p class="text-sm max-w-sm mb-7" style="color: rgba(229,229,229,0.45);">
+        Prueba con otros términos, cambia la categoría o ajusta el precio.
+      </p>
+      <a href="/productos/" class="px-5 py-2.5 rounded-xl text-sm font-semibold" style="background:#1e88e5; color:#fff;">
+        Limpiar filtros
+      </a>
+    </div>
 
-          const imageUrl = firstImg ? absoluteUrl(firstImg) : null;
+    <!-- Paginación — la genera el JS dinámicamente -->
+    <div data-pagination></div>
 
-          const catObj = p.category ?? null;
-
-          return (
-            <ProductCard
-              product={{
-                id: item.id ?? p.slug,
-                name: p.name,
-                slug: p.slug,
-                price: p.price,
-                shortDescription: p.shortDescription ?? p.short_description,
-                imageUrl,
-                featured: p.featured ?? false,
-                stock: p.stock ?? 0,
-                category: catObj ? { name: catObj.name, slug: catObj.slug } : undefined,
-              }}
-            />
-          );
-        })}
-      </div>
-    ) : (
-      <div
-        data-filter-empty
-        class="relative flex flex-col items-center text-center py-20 px-6 rounded-3xl overflow-hidden"
-        style="background: #151a22; border: 1px solid rgba(255,255,255,0.07);"
-      >
-        <h2 class="text-xl font-semibold mb-2" style="color: #e5e5e5;">
-          {hasFilters ? "Sin resultados para tu búsqueda" : "No hay productos disponibles"}
-        </h2>
-        <p class="text-sm max-w-sm mb-7" style="color: rgba(229,229,229,0.45);">
-          {hasFilters
-            ? "Prueba con otros términos, cambia la categoría o ajusta el precio."
-            : "Vuelve pronto, estamos añadiendo nuevos productos constantemente."}
-        </p>
-
-        {hasFilters && (
-          <a href="/productos/" class="px-5 py-2.5 rounded-xl text-sm font-semibold" style="background: #1e88e5; color: #fff;">
-            Limpiar filtros
-          </a>
-        )}
-      </div>
-    )}
-
-    <!-- Paginación -->
-    {pageCount > 1 && (
-      <nav class="mt-12 flex justify-center gap-3 text-sm">
-        {page > 1 && (
-          <a href={buildPageUrl(page - 1)} class="px-4 py-2 rounded-xl border border-white/10 bg-white/5">
-            ← Anterior
-          </a>
-        )}
-
-        {page < pageCount && (
-          <a href={buildPageUrl(page + 1)} class="px-4 py-2 rounded-xl border border-white/10 bg-white/5">
-            Siguiente →
-          </a>
-        )}
-      </nav>
-    )}
   </main>
   <script src="/scripts/products-filter.js" is:inline></script>
 </BaseLayout>
